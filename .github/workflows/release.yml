@@ -41,7 +41,7 @@ jobs:
           version=$(tr -d '\r\n' < VERSION)
           root=$(mktemp -d)
           mkdir -p "$root/DEBIAN" "$root/System/Filesystems" dist
-          cp -m 0755 build/exFAT.so "$root/System/Filesystems/exFAT.so"
+          install -m 0755 build/exFAT.so "$root/System/Filesystems/exFAT.so"
           cat > "$root/DEBIAN/control" <<EOF
           Package: infiltrator-filesystem-exfat
           Version: $version
@@ -56,7 +56,7 @@ jobs:
           dpkg-deb --contents dist/*.deb
           test "$(dpkg-deb --contents dist/*.deb | grep -Ec '/System/Filesystems/exFAT.so$')" = 1
           test "$(dpkg-deb --contents dist/*.deb | grep -Ec '/System/Filesystems/(FAT12|FAT16|FAT32|OFS).so$' || true)" = 0
-          cp -m 0644 build/exFAT.so "dist/exFAT.so"
+          install -m 0644 build/exFAT.so "dist/exFAT.so"
       - name: Preserve byte-identical independently tested SO and DEB
         uses: actions/upload-artifact@v4
         with:
