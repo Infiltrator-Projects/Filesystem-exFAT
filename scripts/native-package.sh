@@ -76,7 +76,7 @@ nm -D "$out/exFAT.so" | grep -Fq 'infiltrator_filesystem_exfat_defrag_v1'
 # runtime; never invoke external filesystem programs to perform operations.
 while IFS= read -r needed; do
   case "$needed" in
-    libc.so.*|libcrypto.so.*|libsqlite3.so.*|libm.so.*|libpthread.so.*) ;;
+    libc.so.*|libcrypto.so.*|libsqlite3.so.*|libm.so.*|libpthread.so.*|ld-linux-x86-64.so.2) ;;
     *) printf 'Unexpected linked runtime dependency: %s\n' "$needed" >&2; exit 1 ;;
   esac
 done < <(readelf -d "$out/exFAT.so" | sed -n 's/.*Shared library: \[\([^]]*\)\].*/\1/p')
