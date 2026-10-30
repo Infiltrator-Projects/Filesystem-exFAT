@@ -1,0 +1,20 @@
+name: Qualify Linux exFAT.so unified filesystem and defrag engine
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  linux-exfat:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y cmake libssl-dev libsqlite3-dev
+      - run: cmake -S . -B build/native -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+      - run: cmake --build build/native --parallel 2
+      - run: ctest --test-dir build/native --output-on-failure
+      - run: |
+          test -f build/native/exFAT.so
+          nm -D build/native/exFAT.so | grep -F infiltrator_filesystem_module_v5
+          nm -D build/native/exFAT.so | grep -F infiltrator_filesystem_exfat_defrag_v1
