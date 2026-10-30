@@ -38,3 +38,10 @@ The Debian package still installs only `exFAT.so` and `exFAT.pdf`; the normal
 Linux OpenSSL, SQLite and C runtime libraries are declared package
 dependencies rather than misrepresented as a freestanding image.
 The application may load `exFAT.so` to defragment as well as create Test Media.
+
+**0.1.3 reliability repair:** The standalone native installer now probes PGO
+training output without a SIGPIPE-prone find/grep pipeline and writes the
+complete exported ELF symbol table before checking V3/V4/V5 and exFAT
+defragmentation symbols. Under strict `set -euo pipefail`, successful native
+compilation and media verification can no longer be misclassified as exit 141.
+Both source-embedded RUN and Debian release qualification remain mandatory.

@@ -58,7 +58,7 @@ cmake -S "$root" -B "$out" -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON \
 cmake --build "$out" --target exfat-unified exfat-unified-contract --parallel 2
 ctest --test-dir "$out" --output-on-failure
 train_media
-if ! find "$pgo" -name '*.gcda' -type f -size +0c | grep -q .; then
+if [[ -z $(find "$pgo" -name '*.gcda' -type f -size +0c -print -quit) ]]; then
   echo 'Measured native exFAT PGO training generated no profile data' >&2
   exit 1
 fi
@@ -68,10 +68,13 @@ cmake -S "$root" -B "$out" -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON \
 cmake --build "$out" --target exfat-unified exfat-unified-contract --clean-first --parallel 2
 ctest --test-dir "$out" --output-on-failure
 train_media
+# Store the full symbol table once: grep -q on nm's stdout can SIGPIPE
+# under set -o pipefail, producing an installation failure after a good build.
+nm -D "$out/exFAT.so" > "$work/native-symbols.txt"
 for abi in 3 4 5; do
-  nm -D "$out/exFAT.so" | grep -Fq "infiltrator_filesystem_module_v$abi"
+  grep -Fq "infiltrator_filesystem_module_v$abi" "$work/native-symbols.txt"
 done
-nm -D "$out/exFAT.so" | grep -Fq 'infiltrator_filesystem_exfat_defrag_v1'
+grep -Fq 'infiltrator_filesystem_exfat_defrag_v1' "$work/native-symbols.txt"
 # Dynamic dependencies are limited to the normal Linux C/crypto/database
 # runtime; never invoke external filesystem programs to perform operations.
 while IFS= read -r needed; do
