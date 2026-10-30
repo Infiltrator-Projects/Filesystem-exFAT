@@ -8,13 +8,14 @@ SOURCES := $(EX)/exfat_module.c $(PORT)/ff.c $(PORT)/ffunicode.c $(PORT)/fatfs_l
 FLAGS := -DIFS_FATFS_ONLY=64 -I$(EX) -I$(PORT)
 # Training uses the normal host runtime for gcov; release stays freestanding.
 FREESTANDING_LINK ?= -nostdlib
+STRICT_SHARED_LINK ?= -Wl,-z,defs
 .PHONY: all test clean
 all: $(OUT)/exFAT.so
 $(OUT):
 	mkdir -p "$(OUT)"
 
 $(OUT)/exFAT.so: $(SOURCES) | $(OUT)
-	$(CC) $(CFLAGS) $(FLAGS) -fPIC -fno-builtin -fno-stack-protector -ffreestanding -fvisibility=hidden $(FREESTANDING_LINK) -shared -Wl,-z,defs -Wl,-z,relro -Wl,-z,now $^ -o "$@"
+	$(CC) $(CFLAGS) $(FLAGS) -fPIC -fno-builtin -fno-stack-protector -ffreestanding -fvisibility=hidden $(FREESTANDING_LINK) -shared $(STRICT_SHARED_LINK) -Wl,-z,relro -Wl,-z,now $^ -o "$@"
 
 $(OUT)/exfat-realimage-test: tests/exfat_so_realimage_test.c $(EX)/exfat_api.h $(PORT)/fatfs_module.h | $(OUT)
 	$(CC) $(CFLAGS) -I$(EX) -I$(PORT) $< -ldl -o "$@"

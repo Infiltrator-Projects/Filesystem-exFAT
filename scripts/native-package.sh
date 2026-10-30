@@ -33,7 +33,7 @@ mkdir -p "$out" "$pgo"
 flags='-std=c11 -O3 -march=native -mtune=native -flto -Wall -Wextra -Wpedantic -Werror'
 # The instrumented shared library may use gcov/libc ONLY during test training.
 # Its host-linked bytes are never installed and never enter the Debian payload.
-make -C "$root" OUT="$out" FREESTANDING_LINK= CFLAGS="$flags -fprofile-generate=$pgo" test
+make -C "$root" OUT="$out" FREESTANDING_LINK= STRICT_SHARED_LINK= CFLAGS="$flags -fprofile-generate=$pgo" test
 if ! find "$pgo" -name '*.gcda' -type f -size +0c | grep -q .; then
   echo 'Measured exFAT PGO training generated no profile data' >&2
   exit 1
