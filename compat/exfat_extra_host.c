@@ -2,7 +2,6 @@
  * Filesystem-neutral POSIX adapters used only by standalone Linux SO worker.
  * The host still owns device identity through the bound identity callback.
  */
-#define _GNU_SOURCE
 #include "ld_device.h"
 #include "ld_io.h"
 #include <errno.h>
