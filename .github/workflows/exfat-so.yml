@@ -13,6 +13,6 @@ jobs:
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
       - name: Independently supplied image tools
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential binutils exfatprogs dosfstools
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential binutils cmake git libssl-dev libsqlite3-dev exfatprogs dosfstools
       - name: Compile and check the real exFAT engine and external media
         run: make test
