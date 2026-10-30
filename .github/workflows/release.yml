@@ -77,7 +77,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          version=$(tr -d '\\r\\n' < VERSION)
+          version=$(tr -d '\r\n' < VERSION)
           bash scripts/build-native-run.sh "dist/filesystem-exfat-${version}-native-installer.run"
           bash "dist/filesystem-exfat-${version}-native-installer.run" --profile aggressive --build-only --output "$RUNNER_TEMP/native-exfat"
           deb="$RUNNER_TEMP/native-exfat/infiltrator-filesystem-exfat_${version}+native1_amd64.deb"

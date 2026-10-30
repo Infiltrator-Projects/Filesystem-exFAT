@@ -9,3 +9,14 @@ Run `make test` on a Linux host with `exfatprogs` and `dosfstools`; the image te
 **Independent 0.1.0 release qualification:** an exact portable `exFAT.so` exposes the original FatFs V3/V4 read/write/format and exFAT V5 64-bit file operations, checked against exfatprogs images and foreign FAT32 rejection. The preserved Linux `exfat.ko` is compiled against Linux 6.12.107 separately and must pass an actual QEMU boot, read/write/rename, remount and offline fsck before publishing. The package installs only `/System/Filesystems/exFAT.so`; the pinned `.ko` is a separate release asset. The generic future kernel SO bridge is **not** a release gate.
 
 **Outstanding:** directory moves are deliberately refused pending ancestry checks; Boot through exFAT.so, Defragmenter integration, power-loss recovery, all capacity/error profiles, other kernel versions and physical firmware/media qualification are not yet complete. A published pair of separately qualified SO/KO artifacts is *not* full exFAT end-to-end integration.
+
+## Hardware-native source installer
+
+Since 0.1.2, the independent `filesystem-exfat-VERSION-native-installer.run`
+contains the committed source and supports `--profile aggressive --system-package-mode`.
+It optimises for the local CPU with `-O3 -march=native -mtune=native -flto`,
+uses real exFAT test images for GCC PGO training, and rebuilds the final
+freestanding driver from those measured profiles. A failed or missing
+training profile aborts installation. The training runtime is never installed.
+The resulting Debian package owns only exFAT.so and the illustrated exFAT.pdf.
+The separately qualified kernel module remains a release asset only.
