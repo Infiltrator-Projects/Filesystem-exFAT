@@ -25,7 +25,7 @@ jobs:
         run: |
           set -euo pipefail
           make test
-          test "$(cat VERSION)" = "0.1.1"
+          test "$(cat VERSION)" = "0.1.2"
           test -s build/exFAT.so
           if readelf -d build/exFAT.so | grep -q '[(]NEEDED[)]'; then
             echo "Non-freestanding runtime dependency in exFAT.so" >&2
@@ -73,6 +73,25 @@ jobs:
           test "$(dpkg-deb --contents dist/*.deb | grep -Ec '/System/Filesystems/exFAT.so$')" = 1
           test "$(dpkg-deb --contents dist/*.deb | grep -Ec '/System/Filesystems/(FAT12|FAT16|FAT32|OFS).so$' || true)" = 0
           install -m 0644 build/exFAT.so "dist/exFAT.so"
+      - name: Build, profile-train and verify portable native RUN (two-file payload)
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(tr -d '\\r\\n' < VERSION)
+          bash scripts/build-native-run.sh "dist/filesystem-exfat-${version}-native-installer.run"
+          bash "dist/filesystem-exfat-${version}-native-installer.run" --profile aggressive --build-only --output "$RUNNER_TEMP/native-exfat"
+          deb="$RUNNER_TEMP/native-exfat/infiltrator-filesystem-exfat_${version}+native1_amd64.deb"
+          test -s "$deb"
+          test "$(dpkg-deb -f "$deb" X-Infiltrator-Native-Profile)" = aggressive
+          test "$(dpkg-deb -f "$deb" X-Infiltrator-PGO)" = trained-two-pass
+          test "$(dpkg-deb -f "$deb" X-Infiltrator-LTO)" = enabled
+          test "$(dpkg-deb -f "$deb" X-Infiltrator-Source-Revision)" = "$GITHUB_SHA"
+          mkdir -p "$RUNNER_TEMP/native-payload"
+          dpkg-deb -x "$deb" "$RUNNER_TEMP/native-payload"
+          test "$(find "$RUNNER_TEMP/native-payload" -type f | wc -l)" -eq 2
+          test -s "$RUNNER_TEMP/native-payload/System/Filesystems/exFAT.so"
+          cmp docs/exFAT.pdf "$RUNNER_TEMP/native-payload/System/Resources/Documentation/Filesystem-exFAT/exFAT.pdf"
+          ! readelf -d "$RUNNER_TEMP/native-payload/System/Filesystems/exFAT.so" | grep -Fq '(NEEDED)'
       - name: Preserve byte-identical independently tested SO and DEB
         uses: actions/upload-artifact@v4
         with:
@@ -238,14 +257,15 @@ jobs:
           version=$(tr -d '\r\n' < VERSION)
           tag="v$version"
           test -s dist/exFAT.so
+          test -s "dist/filesystem-exfat-${version}-native-installer.run"
           test -s "dist/infiltrator-filesystem-exfat_${version}_amd64.deb"
           test -s ko-qualified/exfat.ko
           mv ko-qualified/exfat.ko "dist/exfat-linux-6.12.107.ko"
-          (cd dist && sha256sum exFAT.so *.deb *.ko > SHA256SUMS)
+          (cd dist && sha256sum exFAT.so *.deb *.run *.ko > SHA256SUMS)
           if gh release view "$tag" --json tagName >/dev/null 2>&1; then
             echo "Already published $tag; immutable release will not be overwritten"
             exit 0
           fi
-          gh release create "$tag" dist/exFAT.so dist/*.deb dist/*.ko dist/SHA256SUMS \
+          gh release create "$tag" dist/exFAT.so dist/*.deb dist/*.run dist/*.ko dist/SHA256SUMS \
             --target "$GITHUB_SHA" --title "Filesystem exFAT $version" \
             --notes "Full exFAT.so V3/V4/V5 read/write/format, independently checked using exfatprogs. Separately built original exfat-linux-6.12.107.ko passed real QEMU Linux 6.12.107 mount, write, rename, remount and fsck qualification. Only SO is packaged for /System/Filesystems; KO is a pinned-kernel transitional artifact, not a universal kernel SO bridge. No physical drives or firmware settings were modified."
