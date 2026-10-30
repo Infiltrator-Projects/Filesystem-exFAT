@@ -40,7 +40,7 @@ set_target_properties(exfat-unified PROPERTIES PREFIX "" OUTPUT_NAME "exFAT" SUF
 if(BUILD_TESTING)
  add_executable(exfat-unified-contract tests/test_unified_module.c)
  target_include_directories(exfat-unified-contract PRIVATE
-  "${CMAKE_CURRENT_SOURCE_DIR}/include" "${EXAPI}" "${FAT}")
+  "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/compat" "${EXAPI}" "${FAT}")
  target_link_libraries(exfat-unified-contract PRIVATE exfat-unified)
  add_test(NAME exfat-unified-module COMMAND exfat-unified-contract)
 endif()
