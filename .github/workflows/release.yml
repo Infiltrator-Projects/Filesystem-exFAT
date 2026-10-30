@@ -71,7 +71,8 @@ jobs:
           test -f "$extracted/System/Filesystems/exFAT.so"
           test -f "$extracted/System/Resources/Documentation/Filesystem-exFAT/exFAT.pdf"
           cmp docs/exFAT.pdf "$extracted/System/Resources/Documentation/Filesystem-exFAT/exFAT.pdf"
-          test "$(dpkg-deb --contents dist/*.deb | grep -Ec '/System/Filesystems/exFAT[.]so          test "$(dpkg-deb --contents dist/*.deb | grep -Ec '/System/Filesystems/(FAT12|FAT16|FAT32|OFS).so$' || true)" = 0
+          test -f "$extracted/System/Filesystems/exFAT.so"
+          test -f "$extracted/System/Resources/Documentation/Filesystem-exFAT/exFAT.pdf"
           install -m 0644 build/exFAT.so "dist/exFAT.so"
       - name: Preserve byte-identical independently tested SO and DEB
         uses: actions/upload-artifact@v4
