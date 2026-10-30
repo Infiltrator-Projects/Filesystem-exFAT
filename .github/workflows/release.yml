@@ -20,17 +20,16 @@ jobs:
       - name: Check out exact canonical exFAT source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
       - name: Install compiler, packaging and independent media verifier
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential binutils exfatprogs dosfstools dpkg-dev
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential binutils cmake git libssl-dev libsqlite3-dev exfatprogs dosfstools dpkg-dev
       - name: Qualify the actual complete exFAT.so against independent exfatprogs
         run: |
           set -euo pipefail
           make test
           test "$(cat VERSION)" = "0.1.2"
           test -s build/exFAT.so
-          if readelf -d build/exFAT.so | grep -q '[(]NEEDED[)]'; then
-            echo "Non-freestanding runtime dependency in exFAT.so" >&2
-            exit 1
-          fi
+          # Native Defrag/Recover requires the normal Linux runtime libraries.
+          # The qualified module must export the entire shared-object contract.
+          nm -D build/exFAT.so | grep -F 'infiltrator_filesystem_exfat_defrag_v1'
           for v in 3 4 5; do
             readelf -Ws build/exFAT.so | grep -q "infiltrator_filesystem_module_v$v"
           done
@@ -61,7 +60,7 @@ jobs:
           X-Infiltrator-Resource-SHA256: $sha
           X-Infiltrator-PDF-SHA256: $pdfsha
           Description: Independent exFAT shared filesystem engine for InfiltratorOS
-           Full versioned V3/V4/V5 read/write/format engine; Linux KO published separately.
+           Full V3/V4/V5 read/write/format plus Defrag/Recover; Linux KO separate.
           EOF
           dpkg-deb --build --root-owner-group "$root" "dist/infiltrator-filesystem-exfat_${version}_amd64.deb"
           dpkg-deb --contents dist/*.deb
@@ -91,7 +90,7 @@ jobs:
           test "$(find "$RUNNER_TEMP/native-payload" -type f | wc -l)" -eq 2
           test -s "$RUNNER_TEMP/native-payload/System/Filesystems/exFAT.so"
           cmp docs/exFAT.pdf "$RUNNER_TEMP/native-payload/System/Resources/Documentation/Filesystem-exFAT/exFAT.pdf"
-          ! readelf -d "$RUNNER_TEMP/native-payload/System/Filesystems/exFAT.so" | grep -Fq '(NEEDED)'
+          nm -D "$RUNNER_TEMP/native-payload/System/Filesystems/exFAT.so" | grep -F 'infiltrator_filesystem_exfat_defrag_v1'
       - name: Preserve byte-identical independently tested SO and DEB
         uses: actions/upload-artifact@v4
         with:
@@ -268,4 +267,4 @@ jobs:
           fi
           gh release create "$tag" dist/exFAT.so dist/*.deb dist/*.run dist/*.ko dist/SHA256SUMS \
             --target "$GITHUB_SHA" --title "Filesystem exFAT $version" \
-            --notes "Full exFAT.so V3/V4/V5 read/write/format, independently checked using exfatprogs. Separately built original exfat-linux-6.12.107.ko passed real QEMU Linux 6.12.107 mount, write, rename, remount and fsck qualification. Only SO is packaged for /System/Filesystems; KO is a pinned-kernel transitional artifact, not a universal kernel SO bridge. No physical drives or firmware settings were modified."
+            --notes "Full exFAT.so V3/V4/V5 read/write/format, independently checked using exfatprogs. Separately built original exfat-linux-6.12.107.ko passed real QEMU Linux 6.12.107 mount, write, rename, remount and fsck qualification. Only the unified SO and PDF are packaged; system runtime libraries remain Debian dependencies. KO is a pinned-kernel transitional artifact, not a universal kernel SO bridge. No physical drives or firmware settings were modified."

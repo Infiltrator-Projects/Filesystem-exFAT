@@ -20,3 +20,21 @@ freestanding driver from those measured profiles. A failed or missing
 training profile aborts installation. The training runtime is never installed.
 The resulting Debian package owns only exFAT.so and the illustrated exFAT.pdf.
 The separately qualified kernel module remains a release asset only.
+
+
+## Unified module release contract
+
+The **default `make` and CMake `exfat-unified` target** now produce the full
+`exFAT.so`: V3/V4/V5 read/write/format, 64-bit file operations, plus the
+separately versioned Defragment/Growth Defrag/Recover entrypoint. The older
+freestanding file-API-only build is retained strictly as
+`exFAT-legacy.so` for original ABI and no-DT_NEEDED regression tests.
+It is **not** the distributable module.
+
+`make test` validates both artifacts against independent exfatprogs images,
+including rejecting foreign FAT32 volumes. The native `.run` profiles
+the unified object through those real-media operations in two GCC passes.
+The Debian package still installs only `exFAT.so` and `exFAT.pdf`; the normal
+Linux OpenSSL, SQLite and C runtime libraries are declared package
+dependencies rather than misrepresented as a freestanding image.
+The application may load `exFAT.so` to defragment as well as create Test Media.
