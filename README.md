@@ -1,3 +1,12 @@
+**0.1.4 Python-native packaging:** Portable `.deb` and source-embedded native
+`.run` now use the same `standalone/release.py` / `standalone/build.py`
+structure as FAT and OFS. The portable package owns exactly `exFAT.so` and
+`exFAT.pdf`; the native installer recompiles the shared object with measured
+two-pass PGO and LTO, builds a `+native1` Debian package, and verifies its
+installed bytes and package ownership. Real-image exFAT/FAT32 qualification
+runs during both native training and final verification. The separate
+Linux 6.12 `exfat.ko` build and QEMU checks remain mandatory.
+
 # Filesystem-exFAT
 
 **Independent canonical exFAT source owner for InfiltratorOS.** This repository contains genuine C filesystem source copied from the qualified candidate `Infiltrator-Projects/Filesystems` commit `41d2db4610320348831d5cf04a28b6a32a48c7af`, with original paths, third-party attributions and source notices preserved.
