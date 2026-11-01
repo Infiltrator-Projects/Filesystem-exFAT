@@ -1,0 +1,7 @@
+{
+  "repository": "Filesystem-exFAT",
+  "module": "exFAT.so",
+  "pdf": "docs/exFAT.pdf",
+  "abi": "infiltrator_filesystem_exfat_defrag_v1",
+  "build_system": "cmake"
+}
