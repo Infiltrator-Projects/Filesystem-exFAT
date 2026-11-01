@@ -39,7 +39,7 @@ jobs:
           set -euo pipefail
           python3 -m py_compile standalone/build.py standalone/release.py
           python3 standalone/release.py release
-          version=$(tr -d '\\r\\n' < VERSION)
+          version=$(tr -d '\r\n' < VERSION)
           test -s "dist/infiltrator-filesystem-exfat_${version}_amd64.deb"
           test -s "dist/filesystem-exfat-${version}-native-installer.run"
           install -m 0644 build/exFAT.so dist/exFAT.so
