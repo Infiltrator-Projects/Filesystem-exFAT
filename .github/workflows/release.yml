@@ -1,7 +1,7 @@
 name: Qualify and release exFAT.so plus pinned exfat.ko
 on:
   push:
-    branches: [main]
+    branches: [main, feature/python-native-packaging-20261101]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -25,7 +25,7 @@ jobs:
         run: |
           set -euo pipefail
           make test
-          test "$(cat VERSION)" = "0.1.3"
+          test "$(cat VERSION)" = "0.1.4"
           test -s build/exFAT.so
           # Native Defrag/Recover requires the normal Linux runtime libraries.
           # The qualified module must export the entire shared-object contract.
@@ -33,51 +33,23 @@ jobs:
           for v in 3 4 5; do
             readelf -Ws build/exFAT.so | grep -q "infiltrator_filesystem_module_v$v"
           done
-      - name: Build minimal portable DEB that owns one canonical SO
+      - name: Build portable two-file Debian and source-embedded native RUN using Python
         shell: bash
         run: |
           set -euo pipefail
+          python3 -m py_compile standalone/build.py standalone/release.py
+          python3 standalone/release.py release
           version=$(tr -d '\r\n' < VERSION)
-          root=$(mktemp -d)
-          mkdir -p "$root/DEBIAN" "$root/System/Filesystems" "$root/System/Resources/Documentation/Filesystem-exFAT" dist
-          install -m 0644 docs/exFAT.pdf "$root/System/Resources/Documentation/Filesystem-exFAT/exFAT.pdf"
-          test -s docs/exFAT.pdf
-          install -m 0755 build/exFAT.so "$root/System/Filesystems/exFAT.so"
-          sha=$(sha256sum build/exFAT.so | cut -d' ' -f1)
-          pdfsha=$(sha256sum docs/exFAT.pdf | cut -d' ' -f1)
-          cat > "$root/DEBIAN/control" <<EOF
-          Package: infiltrator-filesystem-exfat
-          Version: $version
-          Architecture: amd64
-          Section: admin
-          Priority: optional
-          Maintainer: Infiltrator Projects <noreply@infiltrator-projects.invalid>
-          X-Infiltrator-Source-Revision: $GITHUB_SHA
-          X-Infiltrator-Native-Profile: portable
-          X-Infiltrator-LTO: disabled
-          X-Infiltrator-PGO: disabled
-          X-Infiltrator-Cflags: -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror
-          X-Infiltrator-Resource-SHA256: $sha
-          X-Infiltrator-PDF-SHA256: $pdfsha
-          Description: Independent exFAT shared filesystem engine for InfiltratorOS
-           Full V3/V4/V5 read/write/format plus Defrag/Recover; Linux KO separate.
-          EOF
-          dpkg-deb --build --root-owner-group "$root" "dist/infiltrator-filesystem-exfat_${version}_amd64.deb"
-          dpkg-deb --contents dist/*.deb
-          extract=$(mktemp -d)
-          dpkg-deb -x dist/*.deb "$extract"
-          test "$(find "$extract" -type f | wc -l)" -eq 2
-          test -f "$extract/System/Filesystems/exFAT.so"
-          cmp docs/exFAT.pdf "$extract/System/Resources/Documentation/Filesystem-exFAT/exFAT.pdf"
-          test "$(dpkg-deb --contents dist/*.deb | grep -Ec '/System/Filesystems/exFAT.so$')" = 1
-          test "$(dpkg-deb --contents dist/*.deb | grep -Ec '/System/Filesystems/(FAT12|FAT16|FAT32|OFS).so$' || true)" = 0
-          install -m 0644 build/exFAT.so "dist/exFAT.so"
+          test -s "dist/infiltrator-filesystem-exfat_${version}_amd64.deb"
+          test -s "dist/filesystem-exfat-${version}-native-installer.run"
+          install -m 0644 build/exFAT.so dist/exFAT.so
+          test "$(dpkg-deb -f dist/*.deb X-Infiltrator-Native-Profile)" = portable
       - name: Build, profile-train and verify portable native RUN (two-file payload)
         shell: bash
         run: |
           set -euo pipefail
           version=$(tr -d '\r\n' < VERSION)
-          bash scripts/build-native-run.sh "dist/filesystem-exfat-${version}-native-installer.run"
+          # Python release.py already generated the source-embedded RUN above.
           bash "dist/filesystem-exfat-${version}-native-installer.run" --profile aggressive --build-only --output "$RUNNER_TEMP/native-exfat"
           deb="$RUNNER_TEMP/native-exfat/infiltrator-filesystem-exfat_${version}+native1_amd64.deb"
           test -s "$deb"
