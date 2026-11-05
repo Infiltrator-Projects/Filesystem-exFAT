@@ -1,0 +1,10 @@
+{
+  "name": "exfat",
+  "directory": "native/filesystems/exfat/linux",
+  "paths": [
+    "native/filesystems/exfat"
+  ],
+  "make_args": [
+    "CONFIG_EXFAT_FS=m"
+  ]
+}
