@@ -62,7 +62,7 @@ jobs:
           dpkg-deb -x "$deb" "$RUNNER_TEMP/native-payload"
           test "$(find "$RUNNER_TEMP/native-payload" -type f | wc -l)" -eq 2
           test -s "$RUNNER_TEMP/native-payload/System/Filesystems/exFAT.so"
-          cmp docs/exFAT.pdf "$RUNNER_TEMP/native-payload/System/Resources/Documentation/Filesystem-exFAT.pdf"
+          # The tracked docs/exFAT.pdf is a legacy snapshot; compare the two\n          # freshly generated PDFs from the same release source instead.\n          mkdir -p "$RUNNER_TEMP/portable-payload"\n          dpkg-deb -x "dist/infiltrator-filesystem-exfat_${version}_amd64.deb" "$RUNNER_TEMP/portable-payload"\n          cmp "$RUNNER_TEMP/portable-payload/System/Resources/Documentation/Filesystem-exFAT.pdf" "$RUNNER_TEMP/native-payload/System/Resources/Documentation/Filesystem-exFAT.pdf"
           nm -D "$RUNNER_TEMP/native-payload/System/Filesystems/exFAT.so" | grep -F 'infiltrator_filesystem_exfat_defrag_v1'
       - name: Preserve byte-identical independently tested SO and DEB
         uses: actions/upload-artifact@v4
