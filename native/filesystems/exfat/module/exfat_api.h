@@ -5,7 +5,7 @@
 #ifndef IFS_EXFAT_SO_API_H
 #define IFS_EXFAT_SO_API_H
 #include <stdint.h>
-#include "../../fat/portable/fatfs_module.h"
+#include "../../../portable/fatfs/fatfs_module.h"
 
 #define IFS_EXFAT_ABI_VERSION_V5 5u
 #define IFS_EXFAT_CAP_READ64 UINT64_C(1)

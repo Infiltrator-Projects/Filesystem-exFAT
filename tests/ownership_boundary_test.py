@@ -23,6 +23,7 @@ fatfs = root / "native/portable/fatfs"
 assert (fatfs / "ff.c").is_file()
 assert (fatfs / "fatfs_module.c").is_file()
 assert "#include \"../../../portable/fatfs/fatfs_module.c\"" in (root / "native/filesystems/exfat/module/exfat_module.c").read_text()
+assert "#include \"../../../portable/fatfs/fatfs_module.h\"" in (root / "native/filesystems/exfat/module/exfat_api.h").read_text()
 builder = (root / "standalone/build.py").read_text()
 assert "native/portable/fatfs" in builder
 assert "backend-ext4" not in builder
