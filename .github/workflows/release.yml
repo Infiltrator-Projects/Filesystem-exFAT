@@ -1,7 +1,7 @@
 name: Qualify and release exFAT.so plus pinned exfat.ko
 on:
   push:
-    branches: [main, feature/python-native-packaging-20261101]
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -24,6 +24,7 @@ jobs:
       - name: Qualify the actual complete exFAT.so against independent exfatprogs
         run: |
           set -euo pipefail
+          python3 tests/ownership_boundary_test.py
           make test
           [[ "$(cat VERSION)" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
           test -s build/exFAT.so

@@ -15,11 +15,11 @@ FetchContent_Declare(infiltratr_common
  GIT_TAG c76ec95ef66fc728df6a906ad75a6a4dd63b419b)
 FetchContent_MakeAvailable(infiltratr_common)
 set(EX_SRC "${CMAKE_CURRENT_SOURCE_DIR}/native/defrag")
-set(FAT "${CMAKE_CURRENT_SOURCE_DIR}/native/filesystems/fat/portable")
+set(FATFS "${CMAKE_CURRENT_SOURCE_DIR}/native/portable/fatfs")
 set(EXAPI "${CMAKE_CURRENT_SOURCE_DIR}/native/filesystems/exfat/module")
 add_library(exfat-unified SHARED
  "${EXAPI}/exfat_module.c"
- "${FAT}/ff.c" "${FAT}/ffunicode.c"
+ "${FATFS}/ff.c" "${FATFS}/ffunicode.c"
  "${EX_SRC}/exfat_common.c" "${EX_SRC}/exfat_plan.c"
  "${EX_SRC}/exfat_relayout.c" "${EX_SRC}/exfat_worker.c"
  compat/legacy_services.c compat/runtime_alloc.c
@@ -27,7 +27,7 @@ add_library(exfat-unified SHARED
 set_source_files_properties("${EX_SRC}/exfat_worker.c" PROPERTIES
  COMPILE_DEFINITIONS "main=ifs_exfat_worker_main")
 target_include_directories(exfat-unified PRIVATE
- "${EX_SRC}" "${FAT}" "${EXAPI}" "${CMAKE_CURRENT_SOURCE_DIR}/compat"
+ "${EX_SRC}" "${FATFS}" "${EXAPI}" "${CMAKE_CURRENT_SOURCE_DIR}/compat"
  "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_compile_definitions(exfat-unified PRIVATE
  _GNU_SOURCE _FILE_OFFSET_BITS=64 IFS_FATFS_ONLY=64)
@@ -40,7 +40,7 @@ set_target_properties(exfat-unified PROPERTIES PREFIX "" OUTPUT_NAME "exFAT" SUF
 if(BUILD_TESTING)
  add_executable(exfat-unified-contract tests/test_unified_module.c)
  target_include_directories(exfat-unified-contract PRIVATE
-  "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/compat" "${EXAPI}" "${FAT}")
+  "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/compat" "${EXAPI}" "${FATFS}")
  target_link_libraries(exfat-unified-contract PRIVATE exfat-unified)
  add_test(NAME exfat-unified-module COMMAND exfat-unified-contract)
 endif()

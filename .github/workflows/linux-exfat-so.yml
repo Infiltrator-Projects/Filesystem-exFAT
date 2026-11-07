@@ -11,6 +11,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: sudo apt-get update && sudo apt-get install -y cmake libssl-dev libsqlite3-dev
+      - name: Enforce one exFAT.so and source ownership
+        run: python3 tests/ownership_boundary_test.py
       - run: cmake -S . -B build/native -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
       - run: cmake --build build/native --parallel 2
       - run: ctest --test-dir build/native --output-on-failure

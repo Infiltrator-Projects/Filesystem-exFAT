@@ -5,7 +5,7 @@
 #if !defined(IFS_FATFS_ONLY) || IFS_FATFS_ONLY != 64
 #error "This translation unit is only for the exFAT engine"
 #endif
-#include "../../fat/portable/fatfs_module.c"
+#include "../../../portable/fatfs/fatfs_module.c"
 
 #include "exfat_api.h"
 

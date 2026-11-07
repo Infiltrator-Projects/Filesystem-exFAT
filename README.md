@@ -9,9 +9,11 @@ Linux 6.12 `exfat.ko` build and QEMU checks remain mandatory.
 
 # Filesystem-exFAT
 
+**One repository, one distributable filesystem library:** `exFAT.so` contains this filesystem’s read/write, format, defragmentation and test-media interfaces. `exFAT-legacy.so` is a regression-test artifact only. No other filesystem driver is a release or installable artifact.
+
 **Independent canonical exFAT source owner for InfiltratorOS.** This repository contains genuine C filesystem source copied from the qualified candidate `Infiltrator-Projects/Filesystems` commit `41d2db4610320348831d5cf04a28b6a32a48c7af`, with original paths, third-party attributions and source notices preserved.
 
-The shared `native/filesystems/fat/portable/` ChaN FatFs engine is compiled **only with the exFAT format selector (IFS_FATFS_ONLY=64)** into `exFAT.so`. The independent `native/filesystems/exfat/module/` exposes V3/V4 filesystem functions and a V5 64-bit file size/offset API. The real Linux `exfat.ko` implementation is under `native/filesystems/exfat/linux/` for separate kernel compilation and runtime checks. We do not redistribute the other FAT12, FAT16 or FAT32 drivers from here.
+The embedded, format-neutral ChaN FatFs source now lives at `native/portable/fatfs/` within **this exFAT repository**. It is compiled **only with the exFAT selector (`IFS_FATFS_ONLY=64`)** into `exFAT.so`; this repository never builds or installs FAT12, FAT16 or FAT32 `.so` files. The independent `native/filesystems/exfat/module/` exposes V3/V4 filesystem functions and a V5 64-bit file size/offset API. The real Linux `exfat.ko` implementation is under `native/filesystems/exfat/linux/` for separate kernel compilation and runtime checks. We do not redistribute the other FAT12, FAT16 or FAT32 drivers from here.
 
 Run `make test` on a Linux host with `exfatprogs` and `dosfstools`; the image tests use only disposable temporary regular files, independently formatted exFAT and FAT32 media and checksum tools. No system partition, UEFI variables or physical media are modified.
 

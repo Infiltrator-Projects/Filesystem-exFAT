@@ -1,7 +1,7 @@
 CC ?= cc
 CFLAGS ?= -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror
 SRC := native/filesystems
-PORT := $(SRC)/fat/portable
+PORT := native/portable/fatfs
 EX := $(SRC)/exfat/module
 OUT ?= build
 SOURCES := $(EX)/exfat_module.c $(PORT)/ff.c $(PORT)/ffunicode.c $(PORT)/fatfs_libc.c
