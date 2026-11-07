@@ -9,6 +9,8 @@ Linux 6.12 `exfat.ko` build and QEMU checks remain mandatory.
 
 # Filesystem-exFAT
 
+
+**Source ownership and release boundary:** This repository owns only the exFAT filesystem engine and its single distributable `exFAT.so`. Common support code is compiled into that module where required, never published as an additional filesystem driver. CI rejects foreign format source directories, provider submodules, extra shared-object installation targets, and unexpected package payloads. The release manual is generated from `docs/exFAT.pages`; the checked-in PDF and preview files are reference copies, not separate installed manuals.
 **One repository, one distributable filesystem library:** `exFAT.so` contains this filesystem’s read/write, format, defragmentation and test-media interfaces. `exFAT-legacy.so` is a regression-test artifact only. No other filesystem driver is a release or installable artifact.
 
 **Independent canonical exFAT source owner for InfiltratorOS.** This repository contains genuine C filesystem source copied from the qualified candidate `Infiltrator-Projects/Filesystems` commit `41d2db4610320348831d5cf04a28b6a32a48c7af`, with original paths, third-party attributions and source notices preserved.
