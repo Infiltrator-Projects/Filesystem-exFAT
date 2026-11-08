@@ -17,6 +17,9 @@ assert len(re.findall(r"\badd_library\([^\n]*\bSHARED\b", cmake)) == 1
 assert 'OUTPUT_NAME "exFAT"' in cmake
 assert "install(TARGETS exfat-unified LIBRARY DESTINATION /System/Filesystems)" in cmake
 assert "IFS_FATFS_ONLY=64" in cmake
+assert 'add_custom_target(exfat-manual ALL' in cmake
+assert 'install(FILES "${EXFAT_GENERATED_MANUAL}"' in cmake
+assert "standalone/generate_manual.py" in cmake
 for unwanted in ("fat", "ffs", "ofs", "ext2", "ext3", "ext4"):
     assert not (root / "native/filesystems" / unwanted).exists(), unwanted
 fatfs = root / "native/portable/fatfs"

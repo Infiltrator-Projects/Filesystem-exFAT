@@ -16,6 +16,18 @@ jobs:
       - run: cmake -S . -B build/native -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
       - run: cmake --build build/native --parallel 2
       - run: ctest --test-dir build/native --output-on-failure
+      - name: Verify CMake installs only the canonical SO and freshly generated versioned PDF
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage="$(mktemp -d)"
+          trap 'rm -rf "$stage"' EXIT
+          DESTDIR="$stage" cmake --install build/native
+          test "$(find "$stage" -type f | wc -l)" -eq 2
+          test -s "$stage/System/Filesystems/exFAT.so"
+          test -s "$stage/System/Resources/Documentation/Filesystem-exFAT.pdf"
+          test "$(head -c 5 "$stage/System/Resources/Documentation/Filesystem-exFAT.pdf")" = '%PDF-'
+          cmp build/native/Filesystem-exFAT.pdf "$stage/System/Resources/Documentation/Filesystem-exFAT.pdf"
       - run: |
           test -f build/native/exFAT.so
           nm -D build/native/exFAT.so | grep -F infiltrator_filesystem_module_v5

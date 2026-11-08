@@ -5,6 +5,7 @@ include(FetchContent)
 find_package(OpenSSL REQUIRED)
 find_package(SQLite3 REQUIRED)
 find_package(Threads REQUIRED)
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -44,4 +45,21 @@ if(BUILD_TESTING)
  target_link_libraries(exfat-unified-contract PRIVATE exfat-unified)
  add_test(NAME exfat-unified-module COMMAND exfat-unified-contract)
 endif()
+# Generate the same versioned manual used by standalone/release.py, rather
+# than installing the stale historical docs/exFAT.pdf snapshot.  CMake's
+# direct installation has the same two-file resource contract as the DEB.
+set(EXFAT_GENERATED_MANUAL "${CMAKE_CURRENT_BINARY_DIR}/Filesystem-exFAT.pdf")
+add_custom_command(
+ OUTPUT "${EXFAT_GENERATED_MANUAL}"
+ COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/standalone/generate_manual.py"
+         "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" "${EXFAT_GENERATED_MANUAL}"
+ DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION"
+         "${CMAKE_CURRENT_SOURCE_DIR}/docs/exFAT.pages"
+         "${CMAKE_CURRENT_SOURCE_DIR}/standalone/manual.py"
+         "${CMAKE_CURRENT_SOURCE_DIR}/standalone/generate_manual.py"
+ COMMENT "Generate current independent exFAT filesystem manual"
+ VERBATIM)
+add_custom_target(exfat-manual ALL DEPENDS "${EXFAT_GENERATED_MANUAL}")
 install(TARGETS exfat-unified LIBRARY DESTINATION /System/Filesystems)
+install(FILES "${EXFAT_GENERATED_MANUAL}"
+        DESTINATION /System/Resources/Documentation)
