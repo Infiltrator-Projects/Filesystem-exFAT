@@ -15,6 +15,10 @@ FetchContent_Declare(infiltratr_common
  GIT_REPOSITORY https://github.com/Infiltrator-Projects/Libraries.git
  GIT_TAG c76ec95ef66fc728df6a906ad75a6a4dd63b419b)
 FetchContent_MakeAvailable(infiltratr_common)
+# Common supplies link-time code, not independent exFAT package payloads.
+# Installing the Common directory would leak unrelated headers, archives,
+# CMake metadata and shared assets into direct filesystem installations.
+set_property(DIRECTORY "${infiltratr_common_SOURCE_DIR}" PROPERTY EXCLUDE_FROM_ALL TRUE)
 set(EX_SRC "${CMAKE_CURRENT_SOURCE_DIR}/native/defrag")
 set(FATFS "${CMAKE_CURRENT_SOURCE_DIR}/native/portable/fatfs")
 set(EXAPI "${CMAKE_CURRENT_SOURCE_DIR}/native/filesystems/exfat/module")
