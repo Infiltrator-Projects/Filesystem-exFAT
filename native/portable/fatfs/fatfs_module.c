@@ -215,48 +215,6 @@ static int create_file(const char *path)
         return -1;
     return f_close(&f) == FR_OK ? 0 : -1;
 }
-static int file_read(const char *path, uint32_t offset, void *buffer, uint32_t n)
-{
-    FIL f;
-    UINT got=0;
-    int good;
-    if (!selected || !path || (!buffer && n) ||
-        f_open(&f, path, FA_READ) != FR_OK) return -1;
-    good=(offset <= f_size(&f)) &&
-         (n <= f_size(&f)-(FSIZE_t)offset) &&
-         f_lseek(&f, (FSIZE_t)offset) == FR_OK &&
-         f_read(&f,buffer,n,&got)==FR_OK && got==n;
-    if (f_close(&f)!=FR_OK) good=0;
-    return good?0:-1;
-}
-static int file_write(const char *path, uint32_t offset, const void *buffer, uint32_t n)
-{
-    FIL f;
-    UINT written=0;
-    int good;
-    if (!selected || !path || (!buffer && n) || n>UINT32_MAX-offset ||
-        f_open(&f,path,FA_WRITE|FA_OPEN_EXISTING)!=FR_OK) return -1;
-    /* FatFs may return FR_OK after clipping a seek when the volume is full.
-     * Never write at the clipped position: that would overwrite earlier data
-     * while telling the caller that its requested offset was honoured. */
-    good=f_lseek(&f,(FSIZE_t)offset)==FR_OK && f_tell(&f)==(FSIZE_t)offset &&
-         f_write(&f,buffer,n,&written)==FR_OK && written==n &&
-         f_sync(&f)==FR_OK;
-    if (f_close(&f)!=FR_OK) good=0;
-    return good?0:-1;
-}
-static int file_truncate(const char *path, uint32_t bytes)
-{
-    FIL f;
-    int good;
-    if (!selected || !path ||
-        f_open(&f,path,FA_WRITE|FA_OPEN_EXISTING)!=FR_OK) return -1;
-    /* As with writes, a clipped seek is not a successful resize. */
-    good=f_lseek(&f,(FSIZE_t)bytes)==FR_OK && f_tell(&f)==(FSIZE_t)bytes &&
-         f_truncate(&f)==FR_OK && f_sync(&f)==FR_OK;
-    if (f_close(&f)!=FR_OK) good=0;
-    return good?0:-1;
-}
 static int make_dir(const char *path) { return selected && path && f_mkdir(path)==FR_OK?0:-1; }
 static int remove_path(const char *path) { return selected && path && f_unlink(path)==FR_OK?0:-1; }
 /* FatFs does not reject moving a FAT directory under its own descendants.
@@ -342,15 +300,6 @@ static void copy_name(char out[768],const char *in)
     while (i<767u && in[i]) {out[i]=in[i];++i;}
     out[i]='\0';
 }
-static int stat_path(const char *path, IfsFatfsEntry *out)
-{
-    FILINFO i;
-    if (!selected || !path || !out || f_stat(path,&i)!=FR_OK) return -1;
-    copy_name(out->name,i.fname);
-    out->bytes=(uint32_t)i.fsize;
-    out->attributes=i.fattrib;
-    return 0;
-}
 static int nth_dir_entry(const char *path,uint32_t nth,IfsFatfsEntry *out)
 {
     DIR d;
@@ -369,19 +318,6 @@ done:
     if(f_closedir(&d)!=FR_OK) return -1;
     return ok==2?0:ok==1?1:-1;
 }
-__attribute__((used,section(".ifsmeta")))
-static const char identity[]="IFS-MODULE:" FS_ID ":3";
-static const IfsFatfsModuleV3 module={
-    IFS_FATFS_MODULE_ABI,sizeof(IfsFatfsModuleV3),FS_ID,
-    IFS_FATFS_CAP_READ | IFS_FATFS_CAP_WRITE_EXISTING |
-    IFS_FATFS_CAP_CREATE | IFS_FATFS_CAP_DELETE | IFS_FATFS_CAP_RENAME |
-    IFS_FATFS_CAP_DIRECTORY | IFS_FATFS_CAP_TRUNCATE,
-    attach,detach,create_file,file_read,file_write,file_truncate,
-    make_dir,remove_path,rename_path,stat_path,nth_dir_entry
-};
-__attribute__((visibility("hidden")))
-const IfsFatfsModuleV3 *infiltrator_filesystem_module_v3(void) {return &module;}
-
 #if IFS_FATFS_ONLY != 64
 static uint16_t boot16(unsigned offset)
 {
@@ -480,28 +416,6 @@ done:
     bound=0;
     return good?0:-1;
 }
-static int set_attributes(const char *path,uint8_t attributes,uint8_t mask)
-{
-    const uint8_t valid=AM_RDO|AM_HID|AM_SYS|AM_ARC;
-    return selected && path && mask && !(mask & (uint8_t)~valid) &&
-           !(attributes & (uint8_t)~valid) &&
-           f_chmod(path,attributes,mask)==FR_OK?0:-1;
-}
-static int set_modified_time(const char *path,uint16_t date,uint16_t time)
-{
-    FILINFO info;
-    unsigned year=1980u+(date>>9),month=(date>>5)&15u,day=date&31u;
-    unsigned hour=time>>11,minute=(time>>5)&63u,second=time&31u;
-    static const uint8_t days[]={0u,31u,28u,31u,30u,31u,30u,31u,31u,30u,31u,30u,31u};
-    unsigned max_day;
-    if (!selected || !path || month<1u || month>12u || !day ||
-        hour>23u || minute>59u || second>29u) return -1;
-    max_day=days[month];
-    if (month==2u && (year%4u==0u && (year%100u!=0u || year%400u==0u))) ++max_day;
-    if (day>max_day) return -1;
-    info.fdate=date; info.ftime=time;
-    return f_utime(path,&info)==FR_OK?0:-1;
-}
 static int volume_space(uint64_t *total,uint64_t *free_bytes)
 {
     FATFS *fs=0;
@@ -513,22 +427,3 @@ static int volume_space(uint64_t *total,uint64_t *free_bytes)
     *free_bytes=(uint64_t)free_clusters*volume.csize*device.sector_bytes;
     return 0;
 }
-static int get_modified_time(const char *path,uint16_t *date,uint16_t *time)
-{
-    FILINFO info;
-    if (!selected || !path || !date || !time || f_stat(path,&info)!=FR_OK)
-        return -1;
-    *date=info.fdate;
-    *time=info.ftime;
-    return 0;
-}
-__attribute__((used,section(".ifsmeta")))
-static const char identity_v4[]="IFS-MODULE:" FS_ID ":4";
-static const IfsFatfsModuleV4 module_v4={
-    IFS_FATFS_MODULE_ABI_V4,sizeof(IfsFatfsModuleV4),FS_ID,
-    IFS_FATFS_CAP_FORMAT | IFS_FATFS_CAP_ATTRIBUTES |
-    IFS_FATFS_CAP_MODIFIED_TIME | IFS_FATFS_CAP_SPACE,
-    &module,format_volume,set_attributes,set_modified_time,get_modified_time,volume_space
-};
-__attribute__((visibility("hidden")))
-const IfsFatfsModuleV4 *infiltrator_filesystem_module_v4(void) {return &module_v4;}
