@@ -30,10 +30,8 @@ jobs:
           test -s build/exFAT.so
           # Native Defrag/Recover requires the normal Linux runtime libraries.
           # The qualified module must export the entire shared-object contract.
-          nm -D build/exFAT.so | grep -F 'infiltrator_filesystem_exfat_defrag_v1'
-          for v in 3 4 5; do
-            readelf -Ws build/exFAT.so | grep -F "infiltrator_filesystem_module_v$v" > /dev/null
-          done
+          nm -D --defined-only build/exFAT.so | grep -F 'infiltrator_filesystem_api_v2'
+          ! nm -D --defined-only build/exFAT.so | grep -E 'infiltrator_filesystem_.*_v1|infiltrator_filesystem_module_v[345]'
       - name: Build portable two-file Debian and source-embedded native RUN using Python
         shell: bash
         run: |
@@ -68,7 +66,8 @@ jobs:
           mkdir -p "$RUNNER_TEMP/portable-payload"
           dpkg-deb -x "dist/infiltrator-filesystem-exfat_${version}_amd64.deb" "$RUNNER_TEMP/portable-payload"
           cmp "$RUNNER_TEMP/portable-payload/System/Resources/Documentation/Filesystem-exFAT.pdf" "$RUNNER_TEMP/native-payload/System/Resources/Documentation/Filesystem-exFAT.pdf"
-          nm -D "$RUNNER_TEMP/native-payload/System/Filesystems/exFAT.so" | grep -F 'infiltrator_filesystem_exfat_defrag_v1'
+          nm -D --defined-only "$RUNNER_TEMP/native-payload/System/Filesystems/exFAT.so" | grep -F 'infiltrator_filesystem_api_v2'
+          ! nm -D --defined-only "$RUNNER_TEMP/native-payload/System/Filesystems/exFAT.so" | grep -E 'infiltrator_filesystem_.*_v1|infiltrator_filesystem_module_v[345]'
       - name: Preserve byte-identical independently tested SO and DEB
         uses: actions/upload-artifact@v4
         with:
