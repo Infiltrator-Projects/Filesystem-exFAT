@@ -49,9 +49,8 @@ static int probe(const IfsFsHostRuntimeV2 *h,uint32_t *variant){
     if(s.mounted)return IFS_FS_BUSY;
     r=geometry(h,&sector,&cluster);if(r)return r;
     IfsFatfsIo io=native(h,sector);
-    const IfsFatfsModuleV3 *m=infiltrator_filesystem_module_v3();
-    r=m->mount(&io);if(r)return IFS_FS_CORRUPT;
-    r=m->unmount();if(r)return IFS_FS_IO_ERROR;
+    r=ifs_exfat_engine_mount(&io);if(r)return IFS_FS_CORRUPT;
+    r=ifs_exfat_engine_unmount();if(r)return IFS_FS_IO_ERROR;
     *variant=64u;return IFS_FS_OK;
 }
 static int mount(const IfsFsHostRuntimeV2 *h,void **v,IfsFsVolumeInfoV2 *info){
@@ -61,10 +60,9 @@ static int mount(const IfsFsHostRuntimeV2 *h,void **v,IfsFsVolumeInfoV2 *info){
     *v=NULL;if(s.mounted||s.generation==UINTPTR_MAX)return IFS_FS_BUSY;
     r=geometry(h,&sector,&cluster);if(r)return r;
     s.host=*h;IfsFatfsIo io=native(&s.host,sector);
-    const IfsFatfsModuleV4 *m=infiltrator_filesystem_module_v4();
-    if(m->v3->mount(&io))return IFS_FS_CORRUPT;
-    if(m->space(&total,&free_bytes)) {
-        (void)m->v3->unmount();return IFS_FS_IO_ERROR;
+    if(ifs_exfat_engine_mount(&io))return IFS_FS_CORRUPT;
+    if(ifs_exfat_engine_space(&total,&free_bytes)) {
+        (void)ifs_exfat_engine_unmount();return IFS_FS_IO_ERROR;
     }
     s.writable=!(h->capabilities&IFS_FS_HOST_READ_ONLY) &&
         (h->capabilities&IFS_FS_HOST_EXCLUSIVE) && h->write_at && h->flush;
@@ -75,7 +73,7 @@ static int mount(const IfsFsHostRuntimeV2 *h,void **v,IfsFsVolumeInfoV2 *info){
 }
 static int unmount(void *v){
     if(!live(v))return IFS_FS_INVALID;
-    if(infiltrator_filesystem_module_v3()->unmount())return IFS_FS_IO_ERROR;
+    if(ifs_exfat_engine_unmount())return IFS_FS_IO_ERROR;
     s.mounted=0;s.writable=0;s.handle=0;s.cluster_bytes=0u;return IFS_FS_OK;
 }
 static int path(const char *src,char dst[4096]){
@@ -112,33 +110,33 @@ static int stat_path(void *v,const char *name,IfsFsEntryV2 *out){
     if(!live(v)||!out)return IFS_FS_INVALID;
     int r=path(name,p);if(r)return r;
     if(p[2]=='/'&&!p[3])return entry(out,&e,1);
-    return infiltrator_filesystem_module_v5()->stat64(p,&e)?
+    return ifs_exfat_engine_stat64(p,&e)?
         IFS_FS_NOT_FOUND:entry(out,&e,0);
 }
 static int nth(void *v,const char *name,uint32_t index,IfsFsEntryV2 *out){
     char p[4096];IfsFatfsEntry small={0};IfsExfatEntry64 e={0};
     if(!live(v)||!out)return IFS_FS_INVALID;
     int r=path(name,p);if(r)return r;
-    r=infiltrator_filesystem_module_v3()->directory_entry(p,index,&small);
+    r=ifs_exfat_engine_directory_entry(p,index,&small);
     if(r)return r==1?IFS_FS_END:IFS_FS_IO_ERROR;
     size_t n=strlen(p),m=strlen(small.name);
     if(!m||n+m+2u>=sizeof(p))return IFS_FS_INVALID;
     if(p[n-1]!='/')p[n++]='/';
     memcpy(p+n,small.name,m+1u);
-    if(infiltrator_filesystem_module_v5()->stat64(p,&e))return IFS_FS_IO_ERROR;
+    if(ifs_exfat_engine_stat64(p,&e))return IFS_FS_IO_ERROR;
     return entry(out,&e,0);
 }
 static int read_file(void *v,const char *name,uint64_t at,void *out,uint32_t n){
     char p[4096];if(!live(v)||(!out&&n))return IFS_FS_INVALID;
     int r=path(name,p);if(r)return r;
-    return infiltrator_filesystem_module_v5()->read64(p,at,out,n)?
+    return ifs_exfat_engine_read64(p,at,out,n)?
         IFS_FS_IO_ERROR:IFS_FS_OK;
 }
 static int write_file(void *v,const char *name,uint64_t at,const void *data,uint32_t n){
     char p[4096];if(!live(v)||(!data&&n))return IFS_FS_INVALID;
     if(!s.writable)return IFS_FS_ACCESS;
     int r=path(name,p);if(r)return r;
-    return infiltrator_filesystem_module_v5()->write64(p,at,data,n)?
+    return ifs_exfat_engine_write64(p,at,data,n)?
         IFS_FS_IO_ERROR:IFS_FS_OK;
 }
 static int create(void *v,const char *name,uint32_t type){
@@ -146,9 +144,8 @@ static int create(void *v,const char *name,uint32_t type){
     if(!s.writable)return IFS_FS_ACCESS;
     int r=path(name,p);if(r)return r;
     if(!p[3])return IFS_FS_INVALID;
-    const IfsFatfsModuleV3 *m=infiltrator_filesystem_module_v3();
-    if(type==IFS_FS_ENTRY_FILE)r=m->create(p);
-    else if(type==IFS_FS_ENTRY_DIRECTORY)r=m->mkdir(p);
+    if(type==IFS_FS_ENTRY_FILE)r=ifs_exfat_engine_create(p);
+    else if(type==IFS_FS_ENTRY_DIRECTORY)r=ifs_exfat_engine_mkdir(p);
     else return IFS_FS_UNSUPPORTED;
     return r?IFS_FS_IO_ERROR:IFS_FS_OK;
 }
@@ -157,7 +154,7 @@ static int remove_path(void *v,const char *name){
     if(!s.writable)return IFS_FS_ACCESS;
     int r=path(name,p);if(r)return r;
     if(!p[3])return IFS_FS_INVALID;
-    return infiltrator_filesystem_module_v3()->unlink(p)?IFS_FS_IO_ERROR:IFS_FS_OK;
+    return ifs_exfat_engine_remove(p)?IFS_FS_IO_ERROR:IFS_FS_OK;
 }
 static int rename_path(void *v,const char *a,const char *b){
     char x[4096],y[4096];if(!live(v))return IFS_FS_INVALID;
@@ -165,13 +162,13 @@ static int rename_path(void *v,const char *a,const char *b){
     int r=path(a,x);if(r)return r;
     r=path(b,y);if(r)return r;
     if(!x[3]||!y[3])return IFS_FS_INVALID;
-    return infiltrator_filesystem_module_v3()->rename(x,y)?IFS_FS_IO_ERROR:IFS_FS_OK;
+    return ifs_exfat_engine_rename(x,y)?IFS_FS_IO_ERROR:IFS_FS_OK;
 }
 static int truncate_path(void *v,const char *name,uint64_t size){
     char p[4096];if(!live(v))return IFS_FS_INVALID;
     if(!s.writable)return IFS_FS_ACCESS;
     int r=path(name,p);if(r)return r;
-    return infiltrator_filesystem_module_v5()->truncate64(p,size)?
+    return ifs_exfat_engine_truncate64(p,size)?
         IFS_FS_IO_ERROR:IFS_FS_OK;
 }
 static int format(const IfsFsHostRuntimeV2 *h,uint32_t variant,
@@ -188,17 +185,17 @@ static int format(const IfsFsHostRuntimeV2 *h,uint32_t variant,
     if (h->logical_sector_bytes < 512u || h->logical_sector_bytes > 4096u)
         return IFS_FS_INVALID;
     IfsFatfsIo io=native(h,h->logical_sector_bytes);
-    return infiltrator_filesystem_module_v4()->format(&io,0u) ?
+    return ifs_exfat_engine_format(&io,0u) ?
         IFS_FS_IO_ERROR:IFS_FS_OK;
 }
-/* Negotiated V2 volume group; all calls use the same exFAT FatFs engine. */
-/* Return the same canonical exFAT allocation information as V1 mount.
+/* V2 volume operations share the same canonical source-owned FatFs state.
+ * Return the mounted engine's authoritative allocation information.
  * This module knows its mounted cluster size and never reparses on-disk FAT. */
 static int v2_query(void *v, IfsFsVolumeInfoV2 *info) {
     uint64_t total=0, free_bytes=0;
     if(!live(v)||!info||info->structure_bytes<sizeof(*info))
         return IFS_FS_INVALID;
-    if(infiltrator_filesystem_module_v4()->space(&total,&free_bytes)!=0)
+    if(ifs_exfat_engine_space(&total,&free_bytes)!=0)
         return IFS_FS_IO_ERROR;
     info->variant=64u;
     info->block_bytes=s.cluster_bytes;
