@@ -1,127 +1,179 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later
- * Test only disposable regular files. This is NOT a physical-disk test.
+ * Strict Common V2 integration over independently formatted disposable files.
+ * Never opens or formats physical block devices.
  */
 #define _POSIX_C_SOURCE 200809L
-#include "exfat_api.h"
+#include <infiltratr/filesystem_module_v2.h>
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
-typedef struct {int fd;uint64_t size;unsigned writes,flushes;} Image;
-static int read_at(void *ctx,uint64_t pos,void *buf,uint32_t n) {
-    Image*d=ctx;
-    if(pos>d->size||n>d->size-pos||pos>INT64_MAX)return -1;
-    return pread(d->fd,buf,n,(off_t)pos)==(ssize_t)n?0:-1;
+typedef struct { int fd; uint64_t size; unsigned writes,flushes; } Image;
+static int read_at(void *ctx,uint64_t at,void *p,uint32_t n) {
+    Image *d=ctx;
+    return p && at<=d->size && n<=d->size-at && at<=INT64_MAX &&
+        pread(d->fd,p,n,(off_t)at)==(ssize_t)n ? 0 : -1;
 }
-static int write_at(void *ctx,uint64_t pos,const void *buf,uint32_t n) {
-    Image*d=ctx;
-    if(pos>d->size||n>d->size-pos||pos>INT64_MAX)return -1;
-    if(pwrite(d->fd,buf,n,(off_t)pos)!=(ssize_t)n)return -1;
-    ++d->writes;return 0;
+static int write_at(void *ctx,uint64_t at,const void *p,uint32_t n) {
+    Image *d=ctx;
+    if (!p || at>d->size || n>d->size-at || at>INT64_MAX ||
+        pwrite(d->fd,p,n,(off_t)at)!=(ssize_t)n) return -1;
+    ++d->writes;
+    return 0;
 }
 static int flush_at(void *ctx) {
-    Image*d=ctx;
-    if(fsync(d->fd)!=0)return -1;
+    Image *d=ctx;
+    if(fsync(d->fd))return -1;
     ++d->flushes;return 0;
 }
-static uint32_t timestamp(void *ctx) {
-    (void)ctx;
-    return ((uint32_t)(2026-1980)<<25)|(10u<<21)|(29u<<16)|(12u<<11);
+static void *allocate_at(void *ctx,size_t n) {(void)ctx;return malloc(n);}
+static void release_at(void *ctx,void *p) {(void)ctx;free(p);}
+static int fail(const char *s) {
+    fprintf(stderr,"EXFAT-COMMON-V2-FAIL: %s\n",s);
+    return 1;
 }
-static int fail(const char*s){fprintf(stderr,"EXFAT-SO-FAILED: %s\n",s);return 1;}
-static int open_image(Image*d,const char*path) {
+static int open_image(Image *d,const char *path) {
     struct stat st;
     memset(d,0,sizeof(*d));
     d->fd=open(path,O_RDWR|O_CLOEXEC|O_NOFOLLOW);
     if(d->fd<0)return -1;
-    if(fstat(d->fd,&st)!=0||!S_ISREG(st.st_mode)||st.st_size<=0){
-        close(d->fd);return -1;
+    if(fstat(d->fd,&st) || !S_ISREG(st.st_mode) || st.st_size<=0) {
+        (void)close(d->fd);return -1;
     }
-    d->size=(uint64_t)st.st_size;return 0;
+    d->size=(uint64_t)st.st_size;
+    return 0;
 }
-int main(int argc,char**argv) {
-    void *library;
-    const IfsFatfsModuleV3 *(*resolve3)(void)=NULL;
-    const IfsFatfsModuleV4 *(*resolve4)(void)=NULL;
-    const IfsExfatModuleV5 *(*resolve5)(void)=NULL;
-    const IfsFatfsModuleV3 *api;
-    const IfsFatfsModuleV4 *v4;
-    const IfsExfatModuleV5 *v5;
-    IfsExfatEntry64 meta64;
-    IfsFatfsIo io;
-    IfsFatfsEntry meta;
-    Image d;
-    unsigned char data[8192],out[8192];
-    if(argc!=4)return fail("arguments: exfat.so exfat-image fat32-image");
-    library=dlopen(argv[1],RTLD_NOW|RTLD_LOCAL);
+static IfsFsHostRuntimeV2 host_for(Image *d,int writable) {
+    IfsFsHostRuntimeV2 h={0};
+    h.abi_version=IFS_FS_HOST_ABI_V2;
+    h.structure_bytes=sizeof(h);
+    h.capabilities=writable?
+        IFS_FS_HOST_EXCLUSIVE|IFS_FS_HOST_DURABLE:IFS_FS_HOST_READ_ONLY;
+    h.volume_bytes=d->size;
+    h.logical_sector_bytes=512u;
+    h.physical_sector_bytes=512u;
+    h.maximum_transfer_bytes=65536u;
+    h.context=d;
+    h.read_at=read_at;
+    h.write_at=writable?write_at:NULL;
+    h.flush=writable?flush_at:NULL;
+    h.allocate=allocate_at;
+    h.release=release_at;
+    return h;
+}
+int main(int argc,char **argv) {
+    if(argc!=4)return fail("usage: exFAT.so disposable-exfat.img disposable-fat32.img");
+    void *library=dlopen(argv[1],RTLD_NOW|RTLD_LOCAL);
     if(!library)return fail(dlerror());
-    *(void **)(&resolve3)=dlsym(library,"infiltrator_filesystem_module_v3");
-    *(void **)(&resolve4)=dlsym(library,"infiltrator_filesystem_module_v4");
-    *(void **)(&resolve5)=dlsym(library,"infiltrator_filesystem_module_v5");
-    api=resolve3?resolve3():NULL;
-    v4=resolve4?resolve4():NULL;
-    v5=resolve5?resolve5():NULL;
-    if(!api||!v4||!v5||api->abi_version!=3u||v4->abi_version!=4u||
-       v5->abi_version!=5u||v5->structure_bytes!=sizeof(*v5)||
-       v5->compat_v4!=v4||strcmp(v5->format_id,"exfat")||
-       !v5->read64||!v5->write64||!v5->truncate64||!v5->stat64||
-       api->structure_bytes!=sizeof(*api)||v4->structure_bytes!=sizeof(*v4)||
-       strcmp(api->format_id,"exfat")||strcmp(v4->format_id,"exfat")||
-       v4->v3!=api||!api->create||!api->write||!api->read||!api->truncate||
-       !api->rename||!api->mkdir||!api->unlink||!api->directory_entry||
-       !v4->format||!v4->space)return fail("incorrect exFAT V3/V4 ABI");
-    if(open_image(&d,argv[3]))return fail("opening foreign FAT32 image");
-    io=(IfsFatfsIo){&d,d.size,512u,read_at,write_at,flush_at,timestamp};
-    if(api->mount(&io)==0||d.writes!=0)return fail("accepted/modified FAT32 volume");
-    if(close(d.fd))return fail("close FAT32 image");
-    if(open_image(&d,argv[2]))return fail("opening exFAT image");
-    io.user=&d;io.partition_bytes=d.size;
-    if(api->mount(&io))return fail("cannot mount real mkfs.exfat volume");
-    if(api->mkdir("0:/TESTDIR")||api->create("0:/TESTDIR/INPUT.BIN"))
-        return fail("directory/file creation");
-    for(unsigned i=0;i<sizeof data;++i)data[i]=(unsigned char)(i*31u+7u);
-    if(v5->write64("0:/TESTDIR/INPUT.BIN",0,data,sizeof data) ||
-       v5->stat64("0:/TESTDIR/INPUT.BIN",&meta64) ||
-       meta64.size_bytes!=sizeof data ||
-       v5->read64("0:/TESTDIR/INPUT.BIN",UINT64_MAX,out,1u)==0 ||
-       api->read("0:/TESTDIR/INPUT.BIN",0,out,sizeof out) ||
-       memcmp(data,out,sizeof data))return fail("multi-cluster write/readback");
-    if(api->rename("0:/TESTDIR/INPUT.BIN","0:/TESTDIR/OUTPUT.BIN")||
-       api->stat("0:/TESTDIR/OUTPUT.BIN",&meta)||meta.bytes!=sizeof data)
-        return fail("file rename or size");
-    if(api->mkdir("0:/TESTDIR/CHILD") ||
-       api->rename("0:/TESTDIR","0:/TESTDIR/CHILD/LOOP")==0)
-        return fail("unsafe recursive directory move");
-    if(v5->truncate64("0:/TESTDIR/OUTPUT.BIN",4096u)||
-       api->unmount()||!d.writes||!d.flushes)return fail("truncate/flush");
-    if(api->mount(&io) ||
-       api->read("0:/TESTDIR/OUTPUT.BIN",0,out,4096u) ||
-       memcmp(out,data,4096u) ||
-       api->stat("0:/TESTDIR/OUTPUT.BIN",&meta) || meta.bytes!=4096u ||
-       v5->stat64("0:/TESTDIR/OUTPUT.BIN",&meta64) ||
-       meta64.size_bytes!=4096u)
-        return fail("remount persistence");
-    if(api->unlink("0:/TESTDIR/OUTPUT.BIN")||
-       api->unlink("0:/TESTDIR/CHILD")||
-       api->unlink("0:/TESTDIR")||api->unmount())
-        return fail("directory/file deletion");
-    /* V4 is a real exFAT formatter, not just an exported symbol. Reformat
-     * ONLY this disposable regular-file image, then remount and mutate it. */
-    {
-        unsigned before=d.writes;
-        if(v4->format(&io,512u)!=0 || d.writes<=before ||
-           api->mount(&io)!=0 || api->create("0:/FORMATTED.BIN")!=0 ||
-           v5->write64("0:/FORMATTED.BIN",0u,data,sizeof data)!=0 ||
-           api->unmount()!=0 || !d.flushes)
-            return fail("exFAT V4 on-image format and remount");
-    }
-    if(close(d.fd)!=0)return fail("close exFAT after format");
-    if(dlclose(library))return fail("library cleanup");
-    puts("EXFAT-SO-MKFS-READ-WRITE-RENAME-TRUNCATE-REMOUNT-PASS");
+    void *symbol=dlsym(library,IFS_FS_COMMON_EXPORT_V2);
+    IfsFsModuleApiEntryV2 resolve=NULL;
+    if(sizeof(resolve)!=sizeof(symbol))return fail("module function pointer representation");
+    memcpy(&resolve,&symbol,sizeof(resolve));
+    const IfsFsModuleApiV2 *api=resolve?resolve():NULL;
+    if(!ifs_fs_api_v2_valid(api,"exfat") ||
+       api->group_mask !=
+           (IFS_FS_GROUP_BIT(IFS_FS_GROUP_CORE)|
+            IFS_FS_GROUP_BIT(IFS_FS_GROUP_VOLUME)) ||
+       (api->runtime_profiles & (IFS_FS_PROFILE_KERNEL|IFS_FS_PROFILE_FIRMWARE)))
+        return fail("strict V2 descriptor not qualified");
+    const IfsFsCoreOpsV2 *core =
+        (const IfsFsCoreOpsV2 *)ifs_fs_group_v2(api,IFS_FS_GROUP_CORE);
+    const IfsFsVolumeOpsV2 *vol =
+        (const IfsFsVolumeOpsV2 *)ifs_fs_group_v2(api,IFS_FS_GROUP_VOLUME);
+    if(!core || !vol || core->header.capabilities!=IFS_FS_CORE_ALL ||
+       vol->header.capabilities!=
+         (IFS_FS_VOLUME_QUERY|IFS_FS_VOLUME_SYNC|IFS_FS_VOLUME_FORMAT))
+        return fail("native CORE or VOLUME capabilities incorrect");
+
+    Image d;
+    if(open_image(&d,argv[3]))return fail("cannot open foreign FAT32 fixture");
+    IfsFsHostRuntimeV2 host=host_for(&d,0);
+    uint32_t variant=0u;
+    if(!ifs_fs_host_v2_valid(&host) ||
+       core->probe(&host,&variant)!=IFS_FS_NOT_FOUND || d.writes)
+        return fail("wrong filesystem accepted or foreign data modified");
+    if(close(d.fd))return fail("foreign media close failed");
+
+    if(open_image(&d,argv[2]))return fail("cannot open external exFAT fixture");
+    host=host_for(&d,1);
+    if(!ifs_fs_host_v2_valid(&host) ||
+       core->probe(&host,&variant)!=IFS_FS_OK || variant!=64u)
+        return fail("exFAT probe rejected independent mkfs media");
+    IfsFsVolumeInfoV2 info={0};
+    info.structure_bytes=sizeof(info);
+    void *mounted=NULL;
+    if(core->mount(&host,&mounted,&info)!=IFS_FS_OK || !mounted ||
+       info.variant!=64u || !info.block_bytes || info.free_bytes>info.total_bytes)
+        return fail("V2 exFAT mount");
+    IfsFsVolumeInfoV2 live_info={0};
+    live_info.structure_bytes=sizeof(live_info);
+    if(vol->query(mounted,&live_info)!=IFS_FS_OK ||
+       live_info.total_bytes!=info.total_bytes ||
+       live_info.free_bytes!=info.free_bytes)
+        return fail("V2 mounted allocation report");
+
+    unsigned char data[8192],back[8192];
+    for(unsigned i=0;i<sizeof(data);++i)data[i]=(unsigned char)(i*31u+7u);
+    if(core->create(mounted,"/TESTDIR",IFS_FS_ENTRY_DIRECTORY)!=IFS_FS_OK ||
+       core->create(mounted,"/TESTDIR/INPUT.BIN",IFS_FS_ENTRY_FILE)!=IFS_FS_OK ||
+       core->write(mounted,"/TESTDIR/INPUT.BIN",0u,data,sizeof(data))!=IFS_FS_OK ||
+       core->read(mounted,"/TESTDIR/INPUT.BIN",0u,back,sizeof(back))!=IFS_FS_OK ||
+       memcmp(back,data,sizeof(data)))
+        return fail("V2 create, write or multicluster read");
+    char name[768]={0};
+    IfsFsEntryV2 entry={0};
+    entry.structure_bytes=sizeof(entry);
+    entry.name=name;entry.name_capacity=sizeof(name);
+    if(core->rename(mounted,"/TESTDIR/INPUT.BIN","/TESTDIR/OUTPUT.BIN")!=IFS_FS_OK ||
+       core->stat(mounted,"/TESTDIR/OUTPUT.BIN",&entry)!=IFS_FS_OK ||
+       entry.size_bytes!=sizeof(data) ||
+       core->read(mounted,"/TESTDIR/OUTPUT.BIN",UINT64_MAX,back,1u)==IFS_FS_OK ||
+       core->create(mounted,"/TESTDIR/CHILD",IFS_FS_ENTRY_DIRECTORY)!=IFS_FS_OK ||
+       core->rename(mounted,"/TESTDIR","/TESTDIR/CHILD/LOOP")==IFS_FS_OK)
+        return fail("V2 rename, size, bounds or recursive directory safety");
+    if(core->truncate(mounted,"/TESTDIR/OUTPUT.BIN",4096u)!=IFS_FS_OK ||
+       vol->sync(mounted)!=IFS_FS_OK ||
+       core->unmount(mounted)!=IFS_FS_OK || !d.writes || !d.flushes)
+        return fail("V2 truncate, flush or unmount");
+    mounted=NULL; info.structure_bytes=sizeof(info);
+    if(core->mount(&host,&mounted,&info)!=IFS_FS_OK ||
+       core->read(mounted,"/TESTDIR/OUTPUT.BIN",0u,back,4096u)!=IFS_FS_OK ||
+       memcmp(back,data,4096u) ||
+       core->stat(mounted,"/TESTDIR/OUTPUT.BIN",&entry)!=IFS_FS_OK ||
+       entry.size_bytes!=4096u)
+        return fail("V2 remount persistence");
+    if(core->remove(mounted,"/TESTDIR/OUTPUT.BIN")!=IFS_FS_OK ||
+       core->remove(mounted,"/TESTDIR/CHILD")!=IFS_FS_OK ||
+       core->remove(mounted,"/TESTDIR")!=IFS_FS_OK ||
+       core->unmount(mounted)!=IFS_FS_OK)
+        return fail("V2 deletion and final unmount");
+    /* V2 format is permitted only after unmount, on this disposable image. */
+    unsigned before=d.writes;
+    if(vol->format(&host,32u,NULL,0u)!=IFS_FS_UNSUPPORTED ||
+       d.writes!=before ||
+       vol->format(&host,64u,NULL,1u)!=IFS_FS_UNSUPPORTED ||
+       d.writes!=before ||
+       vol->format(&host,64u,NULL,0u)!=IFS_FS_OK ||
+       d.writes<=before)
+        return fail("exclusive V2 formatting contract");
+    mounted=NULL;info.structure_bytes=sizeof(info);
+    if(core->mount(&host,&mounted,&info)!=IFS_FS_OK ||
+       core->create(mounted,"/FORMATTED.BIN",IFS_FS_ENTRY_FILE)!=IFS_FS_OK ||
+       core->write(mounted,"/FORMATTED.BIN",0u,data,sizeof(data))!=IFS_FS_OK ||
+       core->unmount(mounted)!=IFS_FS_OK)
+        return fail("V2 formatted media cannot be remounted and written");
+
+    host=host_for(&d,0);
+    if(vol->format(&host,64u,NULL,0u)!=IFS_FS_ACCESS)
+        return fail("read-only format incorrectly permitted");
+    if(close(d.fd)!=0 || dlclose(library)!=0)
+        return fail("resource cleanup");
+    puts("EXFAT-COMMON-V2-REALIMAGE-ROUNDTRIP-PASS");
     return 0;
 }
