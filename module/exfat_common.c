@@ -9,6 +9,7 @@ static struct {
     IfsFsHostIoV1 host;
     uintptr_t generation, handle;
     int mounted, writable;
+    uint32_t cluster_bytes;
 } s;
 static int host_ok(const IfsFsHostIoV1 *h) {
     return h && h->structure_bytes>=sizeof(*h) && h->read_at &&
@@ -69,7 +70,7 @@ static int mount(const IfsFsHostIoV1 *h,void **v,IfsFsVolumeInfoV1 *info){
     }
     s.writable=!(h->flags&IFS_FS_IO_READ_ONLY) &&
         (h->flags&IFS_FS_IO_EXCLUSIVE) && h->write_at && h->flush;
-    s.mounted=1;s.handle=++s.generation;
+    s.mounted=1;s.cluster_bytes=cluster;s.handle=++s.generation;
     info->variant=64u;info->max_name_bytes=765u;info->block_bytes=cluster;
     info->total_bytes=total;info->free_bytes=free_bytes;*v=(void *)s.handle;
     return IFS_FS_OK;
@@ -77,7 +78,7 @@ static int mount(const IfsFsHostIoV1 *h,void **v,IfsFsVolumeInfoV1 *info){
 static int unmount(void *v){
     if(!live(v))return IFS_FS_INVALID;
     if(infiltrator_filesystem_module_v3()->unmount())return IFS_FS_IO_ERROR;
-    s.mounted=0;s.writable=0;s.handle=0;return IFS_FS_OK;
+    s.mounted=0;s.writable=0;s.handle=0;s.cluster_bytes=0u;return IFS_FS_OK;
 }
 static int path(const char *src,char dst[4096]){
     unsigned n=0;if(!src||src[0]!='/')return IFS_FS_INVALID;
@@ -204,6 +205,21 @@ __attribute__((visibility("default")))
 const IfsFsModuleApiV1 *infiltrator_filesystem_api_v1(void){return &api;}
 
 /* Negotiated V2 volume group; all calls use the same exFAT FatFs engine. */
+/* Return the same canonical exFAT allocation information as V1 mount.
+ * This module knows its mounted cluster size and never reparses on-disk FAT. */
+static int v2_query(void *v, IfsFsVolumeInfoV1 *info) {
+    uint64_t total=0, free_bytes=0;
+    if(!live(v)||!info||info->structure_bytes<sizeof(*info))
+        return IFS_FS_INVALID;
+    if(infiltrator_filesystem_module_v4()->space(&total,&free_bytes)!=0)
+        return IFS_FS_IO_ERROR;
+    info->variant=64u;
+    info->block_bytes=s.cluster_bytes;
+    info->max_name_bytes=765u;
+    info->total_bytes=total;
+    info->free_bytes=free_bytes;
+    return IFS_FS_OK;
+}
 static int v2_sync(void *v) {
     if(!live(v))return IFS_FS_INVALID;
     if(!s.host.flush)return IFS_FS_OK;
@@ -221,7 +237,8 @@ static int v2_format(const IfsFsHostRuntimeV2 *host,
 static const IfsFsVolumeOpsV1 group_volume={
     .header={IFS_FS_GROUP_ABI_V1,sizeof(IfsFsVolumeOpsV1),
              IFS_FS_GROUP_VOLUME,0u,
-             IFS_FS_VOLUME_SYNC|IFS_FS_VOLUME_FORMAT},
+             IFS_FS_VOLUME_QUERY|IFS_FS_VOLUME_SYNC|IFS_FS_VOLUME_FORMAT},
+    .query=v2_query,
     .sync=v2_sync,
     .format=v2_format
 };
