@@ -28,7 +28,7 @@ add_library(exfat-unified SHARED
  "${EX_SRC}/exfat_common.c" "${EX_SRC}/exfat_plan.c"
  "${EX_SRC}/exfat_relayout.c" "${EX_SRC}/exfat_worker.c"
  compat/legacy_services.c compat/runtime_alloc.c
- compat/exfat_extra_host.c module/exfat_defrag_module.c)
+ compat/exfat_extra_host.c)
 set_source_files_properties("${EX_SRC}/exfat_worker.c" PROPERTIES
  COMPILE_DEFINITIONS "main=ifs_exfat_worker_main")
 target_include_directories(exfat-unified PRIVATE
