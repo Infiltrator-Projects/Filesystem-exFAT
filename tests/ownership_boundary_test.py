@@ -10,7 +10,7 @@ cfg = json.loads((root / "standalone/config.json").read_text())
 assert cfg["repository"] == "Filesystem-exFAT"
 assert cfg["module"] == "exFAT.so"
 assert cfg["pdf"] == "docs/exFAT.pdf"
-assert cfg["abi"] == "infiltrator_filesystem_exfat_defrag_v1"
+assert cfg["abi"] == "infiltrator_filesystem_api_v2"
 assert "backend_revision" not in cfg
 cmake = (root / "CMakeLists.txt").read_text()
 assert len(re.findall(r"\badd_library\([^\n]*\bSHARED\b", cmake)) == 1
