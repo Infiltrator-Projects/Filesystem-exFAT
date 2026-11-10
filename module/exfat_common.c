@@ -3,6 +3,7 @@
  */
 #include "exfat_api.h"
 #include <infiltratr/filesystem_module.h>
+#include <infiltratr/filesystem_module_v2.h>
 #include <string.h>
 static struct {
     IfsFsHostIoV1 host;
@@ -201,3 +202,41 @@ static const IfsFsModuleApiV1 api={
 };
 __attribute__((visibility("default")))
 const IfsFsModuleApiV1 *infiltrator_filesystem_api_v1(void){return &api;}
+
+/* Negotiated V2 volume group; all calls use the same exFAT FatFs engine. */
+static int v2_sync(void *v) {
+    if(!live(v))return IFS_FS_INVALID;
+    if(!s.host.flush)return IFS_FS_OK;
+    return s.host.flush(s.host.context) ? IFS_FS_IO_ERROR : IFS_FS_OK;
+}
+static int v2_format(const IfsFsHostRuntimeV2 *host,
+                     uint32_t variant,const char *label,uint32_t flags){
+    IfsFsHostFormatIoV1 adapted={0};
+    if(flags)return IFS_FS_UNSUPPORTED;
+    if(!host)return IFS_FS_INVALID;
+    if(host->capabilities & IFS_FS_HOST_READ_ONLY)return IFS_FS_ACCESS;
+    int r=ifs_fs_host_v2_as_format_v1(host,&adapted);
+    return r==IFS_FS_OK?format(&adapted.host,variant,label):r;
+}
+static const IfsFsVolumeOpsV1 group_volume={
+    .header={IFS_FS_GROUP_ABI_V1,sizeof(IfsFsVolumeOpsV1),
+             IFS_FS_GROUP_VOLUME,0u,
+             IFS_FS_VOLUME_SYNC|IFS_FS_VOLUME_FORMAT},
+    .sync=v2_sync,
+    .format=v2_format
+};
+static const IfsFsGroupHeaderV2 *query_v2(
+    uint32_t id,uint32_t min,uint32_t max){
+    if(id!=IFS_FS_GROUP_VOLUME || min>IFS_FS_GROUP_ABI_V1 ||
+       max<IFS_FS_GROUP_ABI_V1)return NULL;
+    return &group_volume.header;
+}
+static const IfsFsModuleApiV2 descriptor_v2={
+    IFS_FS_COMMON_ABI_V2,sizeof(IfsFsModuleApiV2),"exfat",
+    IFS_FS_PROFILE_HOSTED,IFS_FS_GROUP_BIT(IFS_FS_GROUP_VOLUME),
+    &api,query_v2
+};
+__attribute__((visibility("default")))
+const IfsFsModuleApiV2 *infiltrator_filesystem_api_v2(void){
+    return &descriptor_v2;
+}

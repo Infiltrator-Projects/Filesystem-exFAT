@@ -76,3 +76,11 @@ V3/V4/V5 FatFs code. Common reads, writes, file sizes and truncation use the
 native 64-bit exFAT operations. Destructive operations require host-verified
 exclusive access and formatting requires an explicit logical sector size.
 Recovery/defrag remain outside Common V1 until their contracts are complete.
+
+## Common V2 negotiated volume operations
+
+`exFAT.so` exports `infiltrator_filesystem_api_v2` with the hosted volume
+group's durable sync and format operations. They use the existing exFAT
+engine, not a duplicate filesystem implementation. Common validates V2 host
+geometry and exclusive-write permissions. The implementation does not claim
+unqualified check/repair, streams, or direct kernel/firmware execution.
