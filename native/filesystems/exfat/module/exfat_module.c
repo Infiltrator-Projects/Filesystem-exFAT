@@ -64,7 +64,7 @@ static const IfsExfatModuleV5 exfat_v5={
     IFS_EXFAT_CAP_TRUNCATE64|IFS_EXFAT_CAP_STAT64,
     &module_v4,exfat_read64,exfat_write64,exfat_truncate64,exfat_stat64
 };
-__attribute__((visibility("default")))
+__attribute__((visibility("hidden")))
 const IfsExfatModuleV5 *infiltrator_filesystem_module_v5(void)
 {
     return &exfat_v5;
