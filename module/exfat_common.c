@@ -1,51 +1,49 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later
- * Common V1 on the existing exFAT V3/V4/V5 engine, with true 64-bit files.
+ * Canonical Common V2 over the source-owned exFAT FatFs engine.
  */
 #include "exfat_api.h"
-#include <infiltratr/filesystem_module.h>
 #include <infiltratr/filesystem_module_v2.h>
 #include <string.h>
 static struct {
-    IfsFsHostIoV1 host;
+    IfsFsHostRuntimeV2 host;
     uintptr_t generation, handle;
     int mounted, writable;
     uint32_t cluster_bytes;
 } s;
-static int host_ok(const IfsFsHostIoV1 *h) {
-    return h && h->structure_bytes>=sizeof(*h) && h->read_at &&
-           h->volume_bytes>=512u &&
-           !(h->flags & ~(IFS_FS_IO_READ_ONLY|IFS_FS_IO_EXCLUSIVE));
+static int host_ok(const IfsFsHostRuntimeV2 *h) {
+    return ifs_fs_host_v2_valid(h) && h->volume_bytes>=512u;
 }
 static int live(void *v){return s.mounted && s.handle && (uintptr_t)v==s.handle;}
 static int raw_read(void *p,uint64_t at,void *b,uint32_t n) {
-    const IfsFsHostIoV1 *h=p;return h->read_at(h->context,at,b,n);
+    const IfsFsHostRuntimeV2 *h=p;return h->read_at(h->context,at,b,n);
 }
 static int raw_write(void *p,uint64_t at,const void *b,uint32_t n){
-    const IfsFsHostIoV1 *h=p;
-    if((h->flags&IFS_FS_IO_READ_ONLY)||!(h->flags&IFS_FS_IO_EXCLUSIVE)||
+    const IfsFsHostRuntimeV2 *h=p;
+    if((h->capabilities&IFS_FS_HOST_READ_ONLY)||!(h->capabilities&IFS_FS_HOST_EXCLUSIVE)||
        !h->write_at)return -1;
     return h->write_at(h->context,at,b,n);
 }
 static int raw_flush(void *p){
-    const IfsFsHostIoV1 *h=p;
-    if((h->flags&IFS_FS_IO_READ_ONLY)||!(h->flags&IFS_FS_IO_EXCLUSIVE))return 0;
+    const IfsFsHostRuntimeV2 *h=p;
+    if((h->capabilities&IFS_FS_HOST_READ_ONLY)||!(h->capabilities&IFS_FS_HOST_EXCLUSIVE))return 0;
     return h->flush?h->flush(h->context):-1;
 }
 static uint32_t fat_time(void *p){(void)p;return (1u<<21)|(1u<<16);}
-static int geometry(const IfsFsHostIoV1 *h,uint32_t *sector,uint32_t *cluster){
+static int geometry(const IfsFsHostRuntimeV2 *h,uint32_t *sector,uint32_t *cluster){
     uint8_t b[512];if(!host_ok(h))return IFS_FS_INVALID;
     if(h->read_at(h->context,0,b,sizeof(b)))return IFS_FS_IO_ERROR;
     if(memcmp(b+3,"EXFAT   ",8)||b[108]<9u||b[108]>12u||b[109]>25u||
        ((uint64_t)1u<<(b[108]+b[109]))>UINT32_MAX)return IFS_FS_NOT_FOUND;
     *sector=1u<<b[108];*cluster=*sector*(1u<<b[109]);
+    if (*sector != h->logical_sector_bytes) return IFS_FS_CORRUPT;
     return IFS_FS_OK;
 }
-static IfsFatfsIo native(const IfsFsHostIoV1 *h,uint32_t sector){
+static IfsFatfsIo native(const IfsFsHostRuntimeV2 *h,uint32_t sector){
     IfsFatfsIo io={0};io.user=(void *)h;io.partition_bytes=h->volume_bytes;
     io.sector_bytes=sector;io.read_at=raw_read;io.write_at=raw_write;
     io.flush=raw_flush;io.fat_timestamp=fat_time;return io;
 }
-static int probe(const IfsFsHostIoV1 *h,uint32_t *variant){
+static int probe(const IfsFsHostRuntimeV2 *h,uint32_t *variant){
     uint32_t sector,cluster;int r;
     if(!host_ok(h)||!variant)return IFS_FS_INVALID;
     if(s.mounted)return IFS_FS_BUSY;
@@ -56,7 +54,7 @@ static int probe(const IfsFsHostIoV1 *h,uint32_t *variant){
     r=m->unmount();if(r)return IFS_FS_IO_ERROR;
     *variant=64u;return IFS_FS_OK;
 }
-static int mount(const IfsFsHostIoV1 *h,void **v,IfsFsVolumeInfoV1 *info){
+static int mount(const IfsFsHostRuntimeV2 *h,void **v,IfsFsVolumeInfoV2 *info){
     uint32_t sector,cluster;uint64_t total=0,free_bytes=0;int r;
     if(!host_ok(h)||!v||!info||info->structure_bytes<sizeof(*info))
         return IFS_FS_INVALID;
@@ -68,8 +66,8 @@ static int mount(const IfsFsHostIoV1 *h,void **v,IfsFsVolumeInfoV1 *info){
     if(m->space(&total,&free_bytes)) {
         (void)m->v3->unmount();return IFS_FS_IO_ERROR;
     }
-    s.writable=!(h->flags&IFS_FS_IO_READ_ONLY) &&
-        (h->flags&IFS_FS_IO_EXCLUSIVE) && h->write_at && h->flush;
+    s.writable=!(h->capabilities&IFS_FS_HOST_READ_ONLY) &&
+        (h->capabilities&IFS_FS_HOST_EXCLUSIVE) && h->write_at && h->flush;
     s.mounted=1;s.cluster_bytes=cluster;s.handle=++s.generation;
     info->variant=64u;info->max_name_bytes=765u;info->block_bytes=cluster;
     info->total_bytes=total;info->free_bytes=free_bytes;*v=(void *)s.handle;
@@ -96,7 +94,7 @@ static int path(const char *src,char dst[4096]){
     if(src[n])return IFS_FS_INVALID;
     dst[n+2u]=0;return IFS_FS_OK;
 }
-static int entry(IfsFsEntryV1 *out,const IfsExfatEntry64 *e,int root){
+static int entry(IfsFsEntryV2 *out,const IfsExfatEntry64 *e,int root){
     const char *name=root?"/":e->name;uint32_t n=0;
     if(!out||out->structure_bytes<sizeof(*out)||!out->name||
        !out->name_capacity)return IFS_FS_INVALID;
@@ -109,7 +107,7 @@ static int entry(IfsFsEntryV1 *out,const IfsExfatEntry64 *e,int root){
         IFS_FS_ENTRY_DIRECTORY:IFS_FS_ENTRY_FILE;
     return IFS_FS_OK;
 }
-static int stat_path(void *v,const char *name,IfsFsEntryV1 *out){
+static int stat_path(void *v,const char *name,IfsFsEntryV2 *out){
     char p[4096];IfsExfatEntry64 e={0};
     if(!live(v)||!out)return IFS_FS_INVALID;
     int r=path(name,p);if(r)return r;
@@ -117,7 +115,7 @@ static int stat_path(void *v,const char *name,IfsFsEntryV1 *out){
     return infiltrator_filesystem_module_v5()->stat64(p,&e)?
         IFS_FS_NOT_FOUND:entry(out,&e,0);
 }
-static int nth(void *v,const char *name,uint32_t index,IfsFsEntryV1 *out){
+static int nth(void *v,const char *name,uint32_t index,IfsFsEntryV2 *out){
     char p[4096];IfsFatfsEntry small={0};IfsExfatEntry64 e={0};
     if(!live(v)||!out)return IFS_FS_INVALID;
     int r=path(name,p);if(r)return r;
@@ -176,38 +174,27 @@ static int truncate_path(void *v,const char *name,uint64_t size){
     return infiltrator_filesystem_module_v5()->truncate64(p,size)?
         IFS_FS_IO_ERROR:IFS_FS_OK;
 }
-static int format(const IfsFsHostIoV1 *h,uint32_t variant,const char *label){
-    if(!host_ok(h)||variant!=64u)return IFS_FS_INVALID;
-    if((h->flags&IFS_FS_IO_READ_ONLY)||!(h->flags&IFS_FS_IO_EXCLUSIVE)||
-        !h->write_at||!h->flush)return IFS_FS_ACCESS;
-    if(s.mounted)return IFS_FS_BUSY;
-    if(label&&*label)return IFS_FS_UNSUPPORTED;
-    if(h->structure_bytes<sizeof(IfsFsHostFormatIoV1))
+static int format(const IfsFsHostRuntimeV2 *h,uint32_t variant,
+                  const char *label,uint32_t flags) {
+    if (!h || !ifs_fs_host_v2_valid(h))return IFS_FS_INVALID;
+    if ((h->capabilities & IFS_FS_HOST_READ_ONLY) ||
+        !(h->capabilities & IFS_FS_HOST_EXCLUSIVE) ||
+        !(h->capabilities & IFS_FS_HOST_DURABLE))
+        return IFS_FS_ACCESS;
+    if (s.mounted) return IFS_FS_BUSY;
+    if (flags) return IFS_FS_UNSUPPORTED;
+    if (variant != 64u || (label && *label))
         return IFS_FS_UNSUPPORTED;
-    const IfsFsHostFormatIoV1 *ext=(const void *)h;
-    if(ext->reserved||ext->logical_sector_bytes<512u||
-       ext->logical_sector_bytes>4096u||
-       (ext->logical_sector_bytes&(ext->logical_sector_bytes-1u)))
+    if (h->logical_sector_bytes < 512u || h->logical_sector_bytes > 4096u)
         return IFS_FS_INVALID;
-    IfsFatfsIo io=native(h,ext->logical_sector_bytes);
-    return infiltrator_filesystem_module_v4()->format(&io,0u)?
+    IfsFatfsIo io=native(h,h->logical_sector_bytes);
+    return infiltrator_filesystem_module_v4()->format(&io,0u) ?
         IFS_FS_IO_ERROR:IFS_FS_OK;
 }
-static const IfsFsModuleApiV1 api={
-    IFS_FS_COMMON_ABI_V1,sizeof(IfsFsModuleApiV1),"exfat",
-    IFS_FS_CAP_PROBE|IFS_FS_CAP_MOUNT|IFS_FS_CAP_LIST|IFS_FS_CAP_READ|
-    IFS_FS_CAP_WRITE|IFS_FS_CAP_CREATE|IFS_FS_CAP_REMOVE|IFS_FS_CAP_RENAME|
-    IFS_FS_CAP_TRUNCATE|IFS_FS_CAP_FORMAT,
-    probe,mount,unmount,stat_path,nth,read_file,write_file,create,
-    remove_path,rename_path,truncate_path,format,NULL,NULL
-};
-__attribute__((visibility("default")))
-const IfsFsModuleApiV1 *infiltrator_filesystem_api_v1(void){return &api;}
-
 /* Negotiated V2 volume group; all calls use the same exFAT FatFs engine. */
 /* Return the same canonical exFAT allocation information as V1 mount.
  * This module knows its mounted cluster size and never reparses on-disk FAT. */
-static int v2_query(void *v, IfsFsVolumeInfoV1 *info) {
+static int v2_query(void *v, IfsFsVolumeInfoV2 *info) {
     uint64_t total=0, free_bytes=0;
     if(!live(v)||!info||info->structure_bytes<sizeof(*info))
         return IFS_FS_INVALID;
@@ -225,33 +212,38 @@ static int v2_sync(void *v) {
     if(!s.host.flush)return IFS_FS_OK;
     return s.host.flush(s.host.context) ? IFS_FS_IO_ERROR : IFS_FS_OK;
 }
-static int v2_format(const IfsFsHostRuntimeV2 *host,
-                     uint32_t variant,const char *label,uint32_t flags){
-    IfsFsHostFormatIoV1 adapted={0};
-    if(flags)return IFS_FS_UNSUPPORTED;
-    if(!host)return IFS_FS_INVALID;
-    if(host->capabilities & IFS_FS_HOST_READ_ONLY)return IFS_FS_ACCESS;
-    int r=ifs_fs_host_v2_as_format_v1(host,&adapted);
-    return r==IFS_FS_OK?format(&adapted.host,variant,label):r;
-}
-static const IfsFsVolumeOpsV1 group_volume={
-    .header={IFS_FS_GROUP_ABI_V1,sizeof(IfsFsVolumeOpsV1),
+static const IfsFsVolumeOpsV2 group_volume={
+    .header={IFS_FS_GROUP_ABI_V2,sizeof(IfsFsVolumeOpsV2),
              IFS_FS_GROUP_VOLUME,0u,
              IFS_FS_VOLUME_QUERY|IFS_FS_VOLUME_SYNC|IFS_FS_VOLUME_FORMAT},
     .query=v2_query,
     .sync=v2_sync,
-    .format=v2_format
+    .format=format
+};
+/* Native CORE and VOLUME callbacks use the same mounted exFAT FatFs state. */
+static const IfsFsCoreOpsV2 group_core={
+    .header={IFS_FS_GROUP_ABI_V2,sizeof(IfsFsCoreOpsV2),
+             IFS_FS_GROUP_CORE,0u,IFS_FS_CORE_ALL},
+    .probe=probe, .mount=mount, .unmount=unmount,
+    .stat=stat_path, .directory_entry=nth,
+    .read=read_file, .write=write_file, .create=create,
+    .remove=remove_path, .rename=rename_path, .truncate=truncate_path
 };
 static const IfsFsGroupHeaderV2 *query_v2(
     uint32_t id,uint32_t min,uint32_t max){
-    if(id!=IFS_FS_GROUP_VOLUME || min>IFS_FS_GROUP_ABI_V1 ||
-       max<IFS_FS_GROUP_ABI_V1)return NULL;
-    return &group_volume.header;
+    if (min>IFS_FS_GROUP_ABI_V2 || max<IFS_FS_GROUP_ABI_V2) return NULL;
+    if (id==IFS_FS_GROUP_CORE) return &group_core.header;
+    if (id==IFS_FS_GROUP_VOLUME) return &group_volume.header;
+    return NULL;
 }
 static const IfsFsModuleApiV2 descriptor_v2={
-    IFS_FS_COMMON_ABI_V2,sizeof(IfsFsModuleApiV2),"exfat",
-    IFS_FS_PROFILE_HOSTED,IFS_FS_GROUP_BIT(IFS_FS_GROUP_VOLUME),
-    &api,query_v2
+    .abi_version=IFS_FS_COMMON_ABI_V2,
+    .structure_bytes=sizeof(IfsFsModuleApiV2),
+    .format_id="exfat",
+    .runtime_profiles=IFS_FS_PROFILE_HOSTED,
+    .group_mask=IFS_FS_GROUP_BIT(IFS_FS_GROUP_CORE)|
+                IFS_FS_GROUP_BIT(IFS_FS_GROUP_VOLUME),
+    .query_group=query_v2
 };
 __attribute__((visibility("default")))
 const IfsFsModuleApiV2 *infiltrator_filesystem_api_v2(void){
