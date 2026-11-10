@@ -13,6 +13,13 @@ int main(void){
     v2->base_v1!=common ||
     (v2->runtime_profiles&IFS_FS_PROFILE_KERNEL) ||
     !ifs_fs_group_v2(v2,IFS_FS_GROUP_VOLUME))return 1;
+ {
+    const IfsFsVolumeOpsV1 *ops =
+        (const IfsFsVolumeOpsV1 *)ifs_fs_group_v2(
+            v2, IFS_FS_GROUP_VOLUME);
+    if(!ops || !(ops->header.capabilities & IFS_FS_VOLUME_QUERY) ||
+       !ops->query)return 1;
+ }
  if(!ifs_fs_common_api_valid(common,"exfat") ||
     !(common->capabilities & IFS_FS_CAP_FORMAT) ||
     !(common->capabilities & IFS_FS_CAP_READ) ||
