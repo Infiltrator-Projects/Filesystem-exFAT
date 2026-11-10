@@ -23,7 +23,7 @@ set(EX_SRC "${CMAKE_CURRENT_SOURCE_DIR}/native/defrag")
 set(FATFS "${CMAKE_CURRENT_SOURCE_DIR}/native/portable/fatfs")
 set(EXAPI "${CMAKE_CURRENT_SOURCE_DIR}/native/filesystems/exfat/module")
 add_library(exfat-unified SHARED
- "${EXAPI}/exfat_module.c"
+ "${EXAPI}/exfat_module.c" module/exfat_common.c
  "${FATFS}/ff.c" "${FATFS}/ffunicode.c"
  "${EX_SRC}/exfat_common.c" "${EX_SRC}/exfat_plan.c"
  "${EX_SRC}/exfat_relayout.c" "${EX_SRC}/exfat_worker.c"

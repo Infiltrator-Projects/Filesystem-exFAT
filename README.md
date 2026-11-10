@@ -68,3 +68,11 @@ Both source-embedded RUN and Debian release qualification remain mandatory.
 The published Debian package installs these three regular files. A manual native RUN compiles the shared object and Linux adapter locally, generates the PDF, and replaces all three files. It uses the running kernel headers by default. Use `--kernel-build DIRECTORY` for a prepared kernel build with `Module.symvers`. The kernel module is stored for manual use.
 
 InfiltratorOS calls `--system-package-mode` and decides which outputs need updating. Its worker builds a missing or older SO, repairs the PDF independently, and stores the matching released kernel module when available. Use `--build-only --output DIRECTORY` to build a Debian package.
+
+## Shared filesystem ABI
+
+`exFAT.so` exposes `infiltrator_filesystem_api_v1`, backed by its existing
+V3/V4/V5 FatFs code. Common reads, writes, file sizes and truncation use the
+native 64-bit exFAT operations. Destructive operations require host-verified
+exclusive access and formatting requires an explicit logical sector size.
+Recovery/defrag remain outside Common V1 until their contracts are complete.

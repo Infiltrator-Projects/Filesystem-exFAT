@@ -70,7 +70,10 @@ def inspect(module):
     if "DYN (Shared object file)" not in header or "Advanced Micro Devices X86-64" not in header:
         raise RuntimeError("Not an x86-64 shared object")
     symbols = subprocess.check_output(["nm", "-D", str(module)], text=True)
-    if ABI not in [row.split()[-1] for row in symbols.splitlines() if row.split()]:
+    names = [row.split()[-1] for row in symbols.splitlines() if row.split()]
+    if "infiltrator_filesystem_api_v1" not in names:
+        raise RuntimeError("Missing Common filesystem ABI")
+    if ABI not in names:
         raise RuntimeError("Missing exact filesystem ABI " + ABI)
     dependencies(module)
 

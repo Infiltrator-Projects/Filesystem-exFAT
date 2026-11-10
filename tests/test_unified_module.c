@@ -1,9 +1,16 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 #include "ifs_exfat_defrag_v1.h"
 #include "exfat_api.h"
+#include <infiltratr/filesystem_module.h>
+extern const IfsFsModuleApiV1 *infiltrator_filesystem_api_v1(void);
 #include <string.h>
 #include <stdio.h>
 int main(void){
+ const IfsFsModuleApiV1 *common=infiltrator_filesystem_api_v1();
+ if(!ifs_fs_common_api_valid(common,"exfat") ||
+    !(common->capabilities & IFS_FS_CAP_FORMAT) ||
+    !(common->capabilities & IFS_FS_CAP_READ) ||
+    (common->capabilities & IFS_FS_CAP_RECOVER))return 1;
  const IfsExfatDefragV1 *api=infiltrator_filesystem_exfat_defrag_v1();
  const IfsExfatModuleV5 *files=infiltrator_filesystem_module_v5();
  if(!api || api->abi_version!=IFS_EXFAT_DEFRAG_ABI_V1 ||
