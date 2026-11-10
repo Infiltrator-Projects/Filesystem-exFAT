@@ -71,8 +71,10 @@ def inspect(module):
         raise RuntimeError("Not an x86-64 shared object")
     symbols = subprocess.check_output(["nm", "-D", str(module)], text=True)
     names = [row.split()[-1] for row in symbols.splitlines() if row.split()]
-    if "infiltrator_filesystem_api_v1" not in names:
-        raise RuntimeError("Missing Common filesystem ABI")
+    if "infiltrator_filesystem_api_v1" in names:
+        raise RuntimeError("Retired Common filesystem V1 export")
+    if "infiltrator_filesystem_api_v2" not in names:
+        raise RuntimeError("Missing strict Common filesystem V2 export")
     if ABI not in names:
         raise RuntimeError("Missing exact filesystem ABI " + ABI)
     dependencies(module)
@@ -87,6 +89,7 @@ def test(module, workspace=None, training=False):
         run(["cc", "-std=c11", "-O2", "-Wall", "-Wextra", "-Werror",
              "-I", ROOT / "native/filesystems/exfat/module",
              "-I", ROOT / "native/portable/fatfs",
+             "-I", ROOT / "include",
              ROOT / "tests/exfat_so_realimage_test.c", "-ldl", "-o", harness])
         exfat = workspace / "exfat.img"
         fat32 = workspace / "fat32.img"
