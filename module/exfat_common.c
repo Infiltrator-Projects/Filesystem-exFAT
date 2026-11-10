@@ -233,6 +233,8 @@ static const IfsFsGroupHeaderV2 *query_v2(
     if (id==IFS_FS_GROUP_VOLUME) return &group_volume.header;
     return NULL;
 }
+__attribute__((used,section(".ifsmeta")))
+static const char common_v2_identity[]="IFS-MODULE:exfat:common2";
 static const IfsFsModuleApiV2 descriptor_v2={
     .abi_version=IFS_FS_COMMON_ABI_V2,
     .structure_bytes=sizeof(IfsFsModuleApiV2),
