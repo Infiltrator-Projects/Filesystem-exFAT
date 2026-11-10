@@ -379,7 +379,7 @@ static const IfsFatfsModuleV3 module={
     attach,detach,create_file,file_read,file_write,file_truncate,
     make_dir,remove_path,rename_path,stat_path,nth_dir_entry
 };
-__attribute__((visibility("default")))
+__attribute__((visibility("hidden")))
 const IfsFatfsModuleV3 *infiltrator_filesystem_module_v3(void) {return &module;}
 
 #if IFS_FATFS_ONLY != 64
@@ -530,5 +530,5 @@ static const IfsFatfsModuleV4 module_v4={
     IFS_FATFS_CAP_MODIFIED_TIME | IFS_FATFS_CAP_SPACE,
     &module,format_volume,set_attributes,set_modified_time,get_modified_time,volume_space
 };
-__attribute__((visibility("default")))
+__attribute__((visibility("hidden")))
 const IfsFatfsModuleV4 *infiltrator_filesystem_module_v4(void) {return &module_v4;}
