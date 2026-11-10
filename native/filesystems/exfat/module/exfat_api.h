@@ -1,32 +1,27 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later
- * exFAT's 64-bit file API. Independent freestanding shared object.
- * The V3/V4 operations remain available for existing 32-bit callers.
+ * Source-private exFAT engine entry points, never a loadable ABI.
+ * The one public filesystem descriptor is Common V2.
  */
-#ifndef IFS_EXFAT_SO_API_H
-#define IFS_EXFAT_SO_API_H
+#ifndef IFS_EXFAT_ENGINE_INTERNAL_H
+#define IFS_EXFAT_ENGINE_INTERNAL_H
 #include <stdint.h>
 #include "../../../portable/fatfs/fatfs_module.h"
-
-#define IFS_EXFAT_ABI_VERSION_V5 5u
-#define IFS_EXFAT_CAP_READ64 UINT64_C(1)
-#define IFS_EXFAT_CAP_WRITE64 UINT64_C(2)
-#define IFS_EXFAT_CAP_TRUNCATE64 UINT64_C(4)
-#define IFS_EXFAT_CAP_STAT64 UINT64_C(8)
 typedef struct {
     uint64_t size_bytes;
     uint8_t attributes;
     char name[768];
 } IfsExfatEntry64;
-typedef struct {
-    uint32_t abi_version;
-    uint32_t structure_bytes;
-    const char *format_id;
-    uint64_t capabilities;
-    const IfsFatfsModuleV4 *compat_v4;
-    int (*read64)(const char *,uint64_t,void *,uint32_t);
-    int (*write64)(const char *,uint64_t,const void *,uint32_t);
-    int (*truncate64)(const char *,uint64_t);
-    int (*stat64)(const char *,IfsExfatEntry64 *);
-} IfsExfatModuleV5;
-const IfsExfatModuleV5 *infiltrator_filesystem_module_v5(void);
+int ifs_exfat_engine_mount(const IfsFatfsIo *);
+int ifs_exfat_engine_unmount(void);
+int ifs_exfat_engine_create(const char *);
+int ifs_exfat_engine_mkdir(const char *);
+int ifs_exfat_engine_remove(const char *);
+int ifs_exfat_engine_rename(const char *,const char *);
+int ifs_exfat_engine_directory_entry(const char *,uint32_t,IfsFatfsEntry *);
+int ifs_exfat_engine_read64(const char *,uint64_t,void *,uint32_t);
+int ifs_exfat_engine_write64(const char *,uint64_t,const void *,uint32_t);
+int ifs_exfat_engine_truncate64(const char *,uint64_t);
+int ifs_exfat_engine_stat64(const char *,IfsExfatEntry64 *);
+int ifs_exfat_engine_space(uint64_t *,uint64_t *);
+int ifs_exfat_engine_format(const IfsFatfsIo *,uint32_t);
 #endif
