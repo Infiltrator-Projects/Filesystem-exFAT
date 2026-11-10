@@ -9,8 +9,7 @@
 
 #include "exfat_api.h"
 
-/* File sizes on exFAT are 64-bit. FAT12/16's V3 compatibility interface is
- * insufficient; never truncate the genuine FSIZE_t when exposing metadata. */
+/* exFAT has native 64-bit offsets and file sizes; preserve FSIZE_t. */
 static int exfat_read64(const char *path,uint64_t offset,void *out,uint32_t count)
 {
     FIL file;UINT read=0;int good;
@@ -56,16 +55,32 @@ static int exfat_stat64(const char *path,IfsExfatEntry64 *out)
     copy_name(out->name,info.fname);
     return 0;
 }
-__attribute__((used,section(".ifsmeta")))
-static const char exfat_v5_identity[]="IFS-MODULE:exfat:5";
-static const IfsExfatModuleV5 exfat_v5={
-    IFS_EXFAT_ABI_VERSION_V5,sizeof(IfsExfatModuleV5),"exfat",
-    IFS_EXFAT_CAP_READ64|IFS_EXFAT_CAP_WRITE64|
-    IFS_EXFAT_CAP_TRUNCATE64|IFS_EXFAT_CAP_STAT64,
-    &module_v4,exfat_read64,exfat_write64,exfat_truncate64,exfat_stat64
-};
-__attribute__((visibility("hidden")))
-const IfsExfatModuleV5 *infiltrator_filesystem_module_v5(void)
-{
-    return &exfat_v5;
+/* Private C entry points, linked directly into exFAT.so. Not versioned ABI
+ * exports; the only externally discoverable filesystem API is Common V2. */
+int ifs_exfat_engine_mount(const IfsFatfsIo *io) {return attach(io);}
+int ifs_exfat_engine_unmount(void) {return detach();}
+int ifs_exfat_engine_create(const char *p) {return create_file(p);}
+int ifs_exfat_engine_mkdir(const char *p) {return make_dir(p);}
+int ifs_exfat_engine_remove(const char *p) {return remove_path(p);}
+int ifs_exfat_engine_rename(const char *a,const char *b) {return rename_path(a,b);}
+int ifs_exfat_engine_directory_entry(const char *p,uint32_t nth,IfsFatfsEntry *out) {
+    return nth_dir_entry(p,nth,out);
+}
+int ifs_exfat_engine_read64(const char *p,uint64_t at,void *out,uint32_t n) {
+    return exfat_read64(p,at,out,n);
+}
+int ifs_exfat_engine_write64(const char *p,uint64_t at,const void *data,uint32_t n) {
+    return exfat_write64(p,at,data,n);
+}
+int ifs_exfat_engine_truncate64(const char *p,uint64_t n) {
+    return exfat_truncate64(p,n);
+}
+int ifs_exfat_engine_stat64(const char *p,IfsExfatEntry64 *out) {
+    return exfat_stat64(p,out);
+}
+int ifs_exfat_engine_space(uint64_t *total,uint64_t *free_bytes) {
+    return volume_space(total,free_bytes);
+}
+int ifs_exfat_engine_format(const IfsFatfsIo *io,uint32_t cluster_bytes) {
+    return format_volume(io,cluster_bytes);
 }
