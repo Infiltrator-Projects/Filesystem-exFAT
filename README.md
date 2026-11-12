@@ -69,18 +69,11 @@ The published Debian package installs these three regular files. A manual native
 
 InfiltratorOS calls `--system-package-mode` and decides which outputs need updating. Its worker builds a missing or older SO, repairs the PDF independently, and stores the matching released kernel module when available. Use `--build-only --output DIRECTORY` to build a Debian package.
 
-## Shared filesystem ABI
+## Common V2 filesystem ABI
 
-`exFAT.so` exposes `infiltrator_filesystem_api_v1`, backed by its existing
-V3/V4/V5 FatFs code. Common reads, writes, file sizes and truncation use the
-native 64-bit exFAT operations. Destructive operations require host-verified
-exclusive access and formatting requires an explicit logical sector size.
-Recovery/defrag remain outside Common V1 until their contracts are complete.
-
-## Common V2 negotiated volume operations
-
-`exFAT.so` exports `infiltrator_filesystem_api_v2` with the hosted volume
-group's durable sync and format operations. They use the existing exFAT
-engine, not a duplicate filesystem implementation. Common validates V2 host
-geometry and exclusive-write permissions. The implementation does not claim
-unqualified check/repair, streams, or direct kernel/firmware execution.
+`exFAT.so` exposes `infiltrator_filesystem_api_v2` for file and directory
+operations, volume query, sync and formatting through the native 64-bit
+exFAT engine. Formatting uses the logical sector size supplied by the host.
+Writes require exclusive access. Relocation and recovery still use the
+dedicated Defragmenter interface. Kernel and firmware execution require
+separate qualification.
