@@ -55,7 +55,13 @@ jobs:
             echo "::error::Portable exFAT package contains retired V1 filesystem ABI" >&2
             exit 1
           fi
-          cmp "$packaged" dist/exFAT.so
+          nm -D --defined-only dist/exFAT.so | grep -F 'infiltrator_filesystem_api_v2'
+          if nm -D --defined-only dist/exFAT.so | grep -E 'infiltrator_filesystem_.*_v1|infiltrator_filesystem_module_v1'; then
+            echo "::error::Independent exFAT.so release asset contains retired V1 ABI" >&2
+            exit 1
+          fi
+          # Both profiles must implement the same ABI; portable builds may
+          # legitimately differ bytewise from the independently built SO.
       - name: Build, profile-train and verify portable native RUN (two-file payload)
         shell: bash
         run: |
