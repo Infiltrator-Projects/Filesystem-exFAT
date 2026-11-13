@@ -140,6 +140,11 @@ BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 614.0 Tm (A valid implementation mus
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 597.0 Tm (chain. It must honour the upcase table, bitmap and entry set checksums, and distinguish) Tj ET
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 580.0 Tm (ordinary exFAT from TexFAT. Installation status of the shared object or kernel adapter is) Tj ET
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 563.0 Tm (not proof of recovery qualification.) Tj ET
+BT /F2 12 Tf 0.02 0.44 0.50 rg 1 0 0 1 50 517.0 Tm (COMMON V2 SHARED OBJECT) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 489.0 Tm (The hosted Common V2 interface supports file and directory operations, volume queries,) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 472.0 Tm (synchronisation and formatting. Files calls the formatter supplied by exFAT.so.) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 443.0 Tm (The published shared object needs Linux runtime libraries. BOOT requires a freestanding) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 426.0 Tm (firmware profile. Common V2 relocation and recovery remain pending.) Tj ET
 %%Page
 0.05 0.13 0.22 rg 0 749 595 93 re f
 0.01 0.52 0.56 rg 50 747 116 5 re f

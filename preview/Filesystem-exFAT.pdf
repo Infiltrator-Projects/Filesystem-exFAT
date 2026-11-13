@@ -1,5 +1,5 @@
 %PDF-1.4
-%ASCII-ONLY-PDF
+%‚„œ”
 1 0 obj
 << /Type /Catalog /Pages 2 0 R >>
 endobj
@@ -188,7 +188,7 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 19 0 R >>
 endobj
 19 0 obj
-<< /Length 1590 >>
+<< /Length 2240 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
 0.01 0.52 0.56 rg 50 747 116 5 re f
@@ -205,6 +205,11 @@ BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 614.0 Tm (A valid implementation mus
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 597.0 Tm (chain. It must honour the upcase table, bitmap and entry set checksums, and distinguish) Tj ET
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 580.0 Tm (ordinary exFAT from TexFAT. Installation status of the shared object or kernel adapter is) Tj ET
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 563.0 Tm (not proof of recovery qualification.) Tj ET
+BT /F2 12 Tf 0.02 0.44 0.50 rg 1 0 0 1 50 517.0 Tm (COMMON V2 SHARED OBJECT) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 489.0 Tm (The hosted Common V2 interface supports file and directory operations, volume queries,) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 472.0 Tm (synchronisation and formatting. Files calls the formatter supplied by exFAT.so.) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 443.0 Tm (The published shared object needs Linux runtime libraries. BOOT requires a freestanding) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 426.0 Tm (firmware profile. Common V2 relocation and recovery remain pending.) Tj ET
 endstream
 endobj
 20 0 obj
@@ -380,39 +385,39 @@ endobj
 xref
 0 32
 0000000000 65535 f 
-0000000025 00000 n 
-0000000074 00000 n 
-0000000215 00000 n 
-0000000285 00000 n 
-0000000360 00000 n 
-0000000428 00000 n 
-0000000574 00000 n 
-0000003554 00000 n 
-0000003700 00000 n 
-0000005611 00000 n 
-0000005759 00000 n 
-0000007805 00000 n 
-0000007953 00000 n 
-0000009847 00000 n 
-0000009995 00000 n 
-0000011990 00000 n 
-0000012138 00000 n 
-0000014036 00000 n 
-0000014184 00000 n 
-0000015826 00000 n 
-0000015974 00000 n 
-0000018087 00000 n 
-0000018235 00000 n 
-0000020175 00000 n 
-0000020323 00000 n 
-0000022091 00000 n 
-0000022239 00000 n 
-0000024175 00000 n 
-0000024323 00000 n 
-0000027048 00000 n 
-0000027196 00000 n 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000205 00000 n 
+0000000275 00000 n 
+0000000350 00000 n 
+0000000418 00000 n 
+0000000564 00000 n 
+0000003544 00000 n 
+0000003690 00000 n 
+0000005601 00000 n 
+0000005749 00000 n 
+0000007795 00000 n 
+0000007943 00000 n 
+0000009837 00000 n 
+0000009985 00000 n 
+0000011980 00000 n 
+0000012128 00000 n 
+0000014026 00000 n 
+0000014174 00000 n 
+0000016466 00000 n 
+0000016614 00000 n 
+0000018727 00000 n 
+0000018875 00000 n 
+0000020815 00000 n 
+0000020963 00000 n 
+0000022731 00000 n 
+0000022879 00000 n 
+0000024815 00000 n 
+0000024963 00000 n 
+0000027688 00000 n 
+0000027836 00000 n 
 trailer
 << /Size 32 /Root 1 0 R >>
 startxref
-29884
+30524
 %%EOF

@@ -50,9 +50,7 @@ if(BUILD_TESTING)
  target_link_libraries(exfat-unified-contract PRIVATE exfat-unified)
  add_test(NAME exfat-unified-module COMMAND exfat-unified-contract)
 endif()
-# Generate the same versioned manual used by standalone/release.py, rather
-# than installing the stale historical docs/exFAT.pdf snapshot.  CMake's
-# direct installation has the same two-file resource contract as the DEB.
+# Generate the manual from the same editable source used by the DEB and RUN.
 set(EXFAT_GENERATED_MANUAL "${CMAKE_CURRENT_BINARY_DIR}/Filesystem-exFAT.pdf")
 add_custom_command(
  OUTPUT "${EXFAT_GENERATED_MANUAL}"

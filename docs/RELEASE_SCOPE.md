@@ -1,17 +1,14 @@
-# exFAT 0.1.0 standalone release scope
+# exFAT standalone release scope
 
-The two required outputs are an independently built full exFAT.so and an original
-Linux exfat.ko built against precisely Linux 6.12.107. Tests must pass on the
-same commits that generate released bytes. The .deb installs only the .so under
-/System/Filesystems; the .ko is a separate version-pinned artifact and must
-never be inserted into an arbitrary running kernel.
+`exFAT.so` exposes the hosted Common V2 filesystem ABI. Its qualification
+uses independently formatted exFAT images and FAT32 negative controls.
+Firmware execution and Common V2 relocation and recovery remain pending.
 
-exFAT.so retains the V3/V4 FatFs read/write/format paths and the 64-bit exFAT
-V5 ABI. Its independent fixture uses exfatprogs and foreign FAT32 controls.
-exfat.ko retains the original Samsung-origin Linux sources and must pass
-QEMU mount/write/rename/remount/fsck on disposable images. Publication is
-gated on both lanes.
+The release builds `exfat.ko` separately against Linux 6.12.107. Its QEMU
+qualification mounts an exFAT image, writes and renames files, remounts it
+and checks it offline. Publication requires the shared-object and kernel
+tests on the release commit.
 
-The later generic kernel-side SO loader is deliberately excluded. exFAT Boot
-SO and Defragmenter engines are also separate outstanding integration work.
-This status does not claim full end-to-end completion or physical drive tests.
+The released Debian package contains the shared object, generated manual
+and kernel adapter. The adapter matches the tested kernel build and is
+stored under `/System/Kernel/Filesystems` for separate use.

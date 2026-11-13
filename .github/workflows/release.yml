@@ -316,4 +316,4 @@ jobs:
           fi
           gh release create "$tag" dist/exFAT.so dist/*.deb dist/*.run dist/*.ko dist/SHA256SUMS \
             --target "$GITHUB_SHA" --title "Filesystem exFAT $version" \
-            --notes "Full exFAT.so V3/V4/V5 read/write/format, independently checked using exfatprogs. Separately built original exfat-linux-6.12.107.ko passed real QEMU Linux 6.12.107 mount, write, rename, remount and fsck qualification. The Debian package includes the shared object, generated manual and QEMU-tested kernel module; system runtime libraries remain Debian dependencies. KO is a pinned-kernel transitional artifact, not a universal kernel SO bridge. No physical drives or firmware settings were modified."
+            --notes "Hosted Common V2 exFAT.so with file and directory operations, volume queries, sync and formatting. The independent test uses exfatprogs. The separate Linux 6.12.107 kernel adapter passed QEMU mount, write, rename, remount and offline checks. The Debian package contains the shared object, generated manual and kernel adapter. Firmware execution and Common V2 relocation and recovery remain pending."
