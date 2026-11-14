@@ -16,3 +16,22 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential binutils cmake git libssl-dev libsqlite3-dev exfatprogs dosfstools
       - name: Compile and check the real exFAT engine and external media
         run: make test
+      - name: Check short V2 host on independent media with AddressSanitizer
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake -S . -B build-asan -DBUILD_TESTING=ON \
+            -DCMAKE_C_FLAGS='-fsanitize=address -fno-omit-frame-pointer' \
+            -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address \
+            -DCMAKE_SHARED_LINKER_FLAGS=-fsanitize=address
+          cmake --build build-asan --target exfat-unified --parallel 2
+          cc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror \
+            -fsanitize=address -fno-omit-frame-pointer -Iinclude \
+            tests/exfat_so_realimage_test.c -ldl -o build-asan/realimage-test
+          work=$(mktemp -d)
+          trap 'rm -rf "$work"' EXIT
+          truncate -s 128M "$work/exfat.img" "$work/fat32.img"
+          mkfs.exfat -n SOQUAL "$work/exfat.img"
+          mkfs.fat -F 32 -I "$work/fat32.img"
+          ASAN_OPTIONS=detect_leaks=0 build-asan/realimage-test \
+            build-asan/exFAT.so "$work/exfat.img" "$work/fat32.img"

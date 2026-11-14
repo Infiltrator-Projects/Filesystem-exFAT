@@ -108,6 +108,17 @@ int main(int argc,char **argv) {
     IfsFsVolumeInfoV2 info={0};
     info.structure_bytes=sizeof(info);
     void *mounted=NULL;
+    /* The prefix allocation has no room for newer optional host members. */
+    volatile size_t short_bytes=IFS_FS_HOST_V2_BASE_BYTES;
+    IfsFsHostRuntimeV2 *short_host=malloc(short_bytes);
+    if(!short_host)return fail("short V2 host allocation");
+    memcpy(short_host,&host,IFS_FS_HOST_V2_BASE_BYTES);
+    short_host->structure_bytes=IFS_FS_HOST_V2_BASE_BYTES;
+    if(core->mount(short_host,&mounted,&info)!=IFS_FS_OK || !mounted ||
+       core->unmount(mounted)!=IFS_FS_OK)
+        return fail("mount with original short V2 host");
+    free(short_host);
+    mounted=NULL;info.structure_bytes=sizeof(info);
     if(core->mount(&host,&mounted,&info)!=IFS_FS_OK || !mounted ||
        info.variant!=64u || !info.block_bytes || info.free_bytes>info.total_bytes)
         return fail("V2 exFAT mount");

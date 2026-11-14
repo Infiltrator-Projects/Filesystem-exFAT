@@ -59,7 +59,13 @@ static int mount(const IfsFsHostRuntimeV2 *h,void **v,IfsFsVolumeInfoV2 *info){
         return IFS_FS_INVALID;
     *v=NULL;if(s.mounted||s.generation==UINTPTR_MAX)return IFS_FS_BUSY;
     r=geometry(h,&sector,&cluster);if(r)return r;
-    s.host=*h;IfsFatfsIo io=native(&s.host,sector);
+    /* Keep only the caller-supplied V2 prefix; older hosts do not have the
+     * optional entropy field. Clamp the saved size to our own storage. */
+    size_t host_bytes=h->structure_bytes<sizeof(s.host)?h->structure_bytes:sizeof(s.host);
+    memset(&s.host,0,sizeof(s.host));
+    memcpy(&s.host,h,host_bytes);
+    s.host.structure_bytes=(uint32_t)host_bytes;
+    IfsFatfsIo io=native(&s.host,sector);
     if(ifs_exfat_engine_mount(&io))return IFS_FS_CORRUPT;
     if(ifs_exfat_engine_space(&total,&free_bytes)) {
         (void)ifs_exfat_engine_unmount();return IFS_FS_IO_ERROR;
