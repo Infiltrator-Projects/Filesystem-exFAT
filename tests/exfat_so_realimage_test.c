@@ -14,15 +14,17 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-typedef struct { int fd; uint64_t size; unsigned writes,flushes; } Image;
+typedef struct { int fd; uint64_t size; uint32_t sector; unsigned writes,flushes; } Image;
 static int read_at(void *ctx,uint64_t at,void *p,uint32_t n) {
     Image *d=ctx;
-    return p && at<=d->size && n<=d->size-at && at<=INT64_MAX &&
+    return p && d->sector && !(at % d->sector) && !(n % d->sector) &&
+        at<=d->size && n<=d->size-at && at<=INT64_MAX &&
         pread(d->fd,p,n,(off_t)at)==(ssize_t)n ? 0 : -1;
 }
 static int write_at(void *ctx,uint64_t at,const void *p,uint32_t n) {
     Image *d=ctx;
-    if (!p || at>d->size || n>d->size-at || at>INT64_MAX ||
+    if (!p || !d->sector || (at % d->sector) || (n % d->sector) ||
+        at>d->size || n>d->size-at || at>INT64_MAX ||
         pwrite(d->fd,p,n,(off_t)at)!=(ssize_t)n) return -1;
     ++d->writes;
     return 0;
@@ -47,6 +49,7 @@ static int open_image(Image *d,const char *path) {
         (void)close(d->fd);return -1;
     }
     d->size=(uint64_t)st.st_size;
+    d->sector=512u;
     return 0;
 }
 static IfsFsHostRuntimeV2 host_for(Image *d,int writable) {
@@ -183,6 +186,20 @@ int main(int argc,char **argv) {
     host=host_for(&d,0);
     if(vol->format(&host,64u,NULL,0u)!=IFS_FS_ACCESS)
         return fail("read-only format incorrectly permitted");
+    /* Reformat the disposable image with a strict 4 KiB-sector host. Both
+     * callback alignment and real mount/write are checked, not just a probe. */
+    d.sector=4096u;
+    host=host_for(&d,1);
+    host.logical_sector_bytes=host.physical_sector_bytes=d.sector;
+    if(vol->format(&host,64u,NULL,0u)!=IFS_FS_OK ||
+       core->probe(&host,&variant)!=IFS_FS_OK || variant!=64u)
+        return fail("4 KiB-sector V2 format or probe");
+    mounted=NULL;info.structure_bytes=sizeof(info);
+    if(core->mount(&host,&mounted,&info)!=IFS_FS_OK ||
+       core->create(mounted,"/FOURK.BIN",IFS_FS_ENTRY_FILE)!=IFS_FS_OK ||
+       core->write(mounted,"/FOURK.BIN",0u,data,sizeof(data))!=IFS_FS_OK ||
+       core->unmount(mounted)!=IFS_FS_OK)
+        return fail("4 KiB-sector V2 mount or write");
     if(close(d.fd)!=0 || dlclose(library)!=0)
         return fail("resource cleanup");
     puts("EXFAT-COMMON-V2-REALIMAGE-ROUNDTRIP-PASS");

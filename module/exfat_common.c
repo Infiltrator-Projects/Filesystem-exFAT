@@ -31,7 +31,8 @@ static int raw_flush(void *p){
 static uint32_t fat_time(void *p){(void)p;return (1u<<21)|(1u<<16);}
 static int geometry(const IfsFsHostRuntimeV2 *h,uint32_t *sector,uint32_t *cluster){
     uint8_t b[512];if(!host_ok(h))return IFS_FS_INVALID;
-    if(h->read_at(h->context,0,b,sizeof(b)))return IFS_FS_IO_ERROR;
+    int status=ifs_fs_host_read_bytes_v2(h,0u,b,sizeof(b));
+    if(status!=IFS_FS_OK)return status;
     if(memcmp(b+3,"EXFAT   ",8)||b[108]<9u||b[108]>12u||b[109]>25u||
        ((uint64_t)1u<<(b[108]+b[109]))>UINT32_MAX)return IFS_FS_NOT_FOUND;
     *sector=1u<<b[108];*cluster=*sector*(1u<<b[109]);
