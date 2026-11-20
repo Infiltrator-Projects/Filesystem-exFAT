@@ -64,7 +64,7 @@ static void host_free(void *ctx,void *ptr)
 }
 int main(int argc,char **argv)
 {
-    ENSURE(argc==3);
+    ENSURE(argc==3 || (argc==4 && strcmp(argv[3],"--reject-corrupt")==0));
     FILE *binary=fopen(argv[1],"rb");
     ENSURE(binary!=NULL);
     struct stat st;
@@ -104,7 +104,20 @@ int main(int argc,char **argv)
     host.release=host_free;
     ENSURE(ifs_fs_host_v2_valid(&host));
     uint32_t variant=0;
-    ENSURE(core->probe(&host,&variant)==IFS_FS_OK && variant==64);
+    const int probed=core->probe(&host,&variant);
+    if(argc==4) {
+        ENSURE(probed==IFS_FS_CORRUPT);
+        IfsFsVolumeInfoV2 bad_info={0};
+        bad_info.structure_bytes=sizeof(bad_info);
+        void *bad_volume=NULL;
+        ENSURE(core->mount(&host,&bad_volume,&bad_info)==IFS_FS_CORRUPT &&
+               bad_volume==NULL);
+        ENSURE(fclose(disk.file)==0);
+        BootSoUnload(&image);
+        puts("EXFAT-BOOT-COMMON-V2-CORRUPT-CHECKSUM-REFUSED");
+        return 0;
+    }
+    ENSURE(probed==IFS_FS_OK && variant==64);
     IfsFsVolumeInfoV2 volume_info={0};
     volume_info.structure_bytes=sizeof(volume_info);
     void *volume=NULL;

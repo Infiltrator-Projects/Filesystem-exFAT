@@ -50,6 +50,13 @@ jobs:
           sha256sum "$work/exfat.img" > "$work/before.sha256"
           build/boot-read-test build/exFAT.so "$work/exfat.img"
           build/boot-read-test build/unified/firmware/exFAT.so "$work/exfat.img"
+          # Corrupt a disposable COPY of the boot checksum sector, not source.
+          cp "$work/exfat.img" "$work/corrupt.img"
+          dd if=/dev/zero of="$work/corrupt.img" bs=4096 seek=11 count=1 \
+             conv=notrunc status=none
+          build/boot-read-test build/exFAT.so "$work/corrupt.img" --reject-corrupt
+          build/boot-read-test build/unified/firmware/exFAT.so \
+            "$work/corrupt.img" --reject-corrupt
           (cd "$work" && sha256sum -c before.sha256)
       - name: Create portable DEB and source-embedded RUN without a kernel module
         run: |

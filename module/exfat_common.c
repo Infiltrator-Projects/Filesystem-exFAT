@@ -29,15 +29,53 @@ static int raw_flush(void *p){
     return h->flush?h->flush(h->context):-1;
 }
 static uint32_t fat_time(void *p){(void)p;return (1u<<21)|(1u<<16);}
+/* exFAT checksum of the 11 Main Boot Region sectors, per on-disk format.
+ * VolumeFlags (106-107) and PercentInUse (112) are intentionally excluded
+ * by the standard; everything else, including boot code, is authenticated
+ * by the 32-bit rotate/add checksum. Never skip this check for BOOT.
+ * This is a corruption check, not a cryptographic trust signature.
+ */
+static int boot_checksum(const IfsFsHostRuntimeV2 *host,uint32_t sector)
+{
+    uint8_t buf[4096];
+    uint32_t sum=0;
+    if (sector<512u || sector>sizeof(buf) ||
+        host->volume_bytes<(uint64_t)sector*24u)
+        return IFS_FS_CORRUPT;
+    for(uint32_t block=0;block<11u;++block) {
+        int status=ifs_fs_host_read_bytes_v2(
+            host,(uint64_t)block*sector,buf,sector);
+        if(status!=IFS_FS_OK)return status;
+        for(uint32_t i=0;i<sector;++i) {
+            if(block==0u&&(i==106u||i==107u||i==112u))
+                continue;
+            sum=(sum>>1)|(sum<<31);
+            sum+=(uint32_t)buf[i];
+        }
+    }
+    int status=ifs_fs_host_read_bytes_v2(host,(uint64_t)11u*sector,buf,sector);
+    if(status!=IFS_FS_OK)return status;
+    for(uint32_t i=0;i<sector;i+=4u) {
+        const uint32_t recorded=(uint32_t)buf[i] |
+            ((uint32_t)buf[i+1u]<<8) |
+            ((uint32_t)buf[i+2u]<<16) |
+            ((uint32_t)buf[i+3u]<<24);
+        if(recorded!=sum)return IFS_FS_CORRUPT;
+    }
+    return IFS_FS_OK;
+}
 static int geometry(const IfsFsHostRuntimeV2 *h,uint32_t *sector,uint32_t *cluster){
     uint8_t b[512];if(!host_ok(h))return IFS_FS_INVALID;
     int status=ifs_fs_host_read_bytes_v2(h,0u,b,sizeof(b));
     if(status!=IFS_FS_OK)return status;
-    if(memcmp(b+3,"EXFAT   ",8)||b[108]<9u||b[108]>12u||b[109]>25u||
-       ((uint64_t)1u<<(b[108]+b[109]))>UINT32_MAX)return IFS_FS_NOT_FOUND;
+    if(memcmp(b+3,"EXFAT   ",8))return IFS_FS_NOT_FOUND;
+    if(b[108]<9u||b[108]>12u||b[109]>25u||
+       ((uint64_t)1u<<(b[108]+b[109]))>UINT32_MAX||
+       b[510]!=0x55u||b[511]!=0xAAu)
+        return IFS_FS_CORRUPT;
     *sector=1u<<b[108];*cluster=*sector*(1u<<b[109]);
     if (*sector != h->logical_sector_bytes) return IFS_FS_CORRUPT;
-    return IFS_FS_OK;
+    return boot_checksum(h,*sector);
 }
 static IfsFatfsIo native(const IfsFsHostRuntimeV2 *h,uint32_t sector){
     IfsFatfsIo io={0};io.user=(void *)h;io.partition_bytes=h->volume_bytes;
