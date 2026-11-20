@@ -42,7 +42,8 @@ static int copy_and_verify(const IfsFsCoreOpsV2 *c,void *v,const char *name,cons
   char label[768];IfsFsEntryV2 e={0};
   e.structure_bytes=sizeof(e);e.name=label;e.name_capacity=sizeof(label);
   int ok=c->stat(v,name,&e)==IFS_FS_OK && e.size_bytes==(uint64_t)s.st_size;
-  if(fclose(f))return -1;return ok?0:-1;
+  if(fclose(f))return -1;
+  return ok?0:-1;
 }
 int main(int argc,char **argv) {
   MUST(argc==5);

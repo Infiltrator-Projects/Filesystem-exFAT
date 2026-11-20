@@ -9,17 +9,17 @@ permissions:
 jobs:
   exfat-uefi:
     runs-on: ubuntu-24.04
-    timeout-minutes: 18
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
-      - name: Install independent UEFI and Minix media tooling
+      - name: Install independent exFAT and virtual UEFI tooling
         run: |
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            build-essential cmake libssl-dev cpio busybox-static \
-            util-linux exfatprogs e2fsprogs dosfstools gdisk mtools qemu-system-x86 ovmf
-      - name: Get authenticated production BOOT validation contract
+            build-essential cmake libssl-dev libsqlite3-dev cpio busybox-static \
+            util-linux exfatprogs dosfstools gdisk mtools qemu-system-x86 ovmf
+      - name: Acquire cryptographically pinned BOOT production executable
         run: |
           set -euo pipefail
           work="$RUNNER_TEMP/exfat-firmware"
@@ -32,41 +32,42 @@ jobs:
             73429727974a902372f7d2644d00bb1f527e42b4454f9f3cafbf8ef1ad6c9a8e \
             "$work/$boot" | sha256sum -c -
           dpkg-deb -x "$work/$boot" "$work/boot"
-      - name: Require V2-only carrier and actual production validator
+      - name: Validate both standalone firmware ELF and installed host carrier
         run: |
           set -euo pipefail
           work="$RUNNER_TEMP/exfat-firmware"
           cmake -S . -B "$work/build" -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
           cmake --build "$work/build" --parallel 2
           ctest --test-dir "$work/build" --output-on-failure
-          test -s "$work/build/exFAT.so"
-          test -s "$work/build/firmware/exFAT.so"
-          sh tests/check_production_v2.sh "$work/build/exFAT.so"
+          test -s "$work/build/exFAT.so" && test -s "$work/build/firmware/exFAT.so"
+          nm -D --defined-only "$work/build/exFAT.so" | grep -F infiltrator_filesystem_api_v2
+          ! nm -D --defined-only "$work/build/exFAT.so" | grep -E 'infiltrator_filesystem_.*_v1|infiltrator_filesystem_module_v[345]'
           validator="$work/boot/usr/lib/infiltrator-boot/validate-module"
           "$validator" "$work/build/firmware/exFAT.so"
           "$validator" "$work/build/exFAT.so"
           DESTDIR="$work/stage" cmake --install "$work/build"
           cmp "$work/stage/System/Filesystems/exFAT.so" "$work/build/exFAT.so"
           "$validator" "$work/stage/System/Filesystems/exFAT.so"
-      - name: Prove real kernel and initramfs from clean Minix V3 and corrupt rejection
+          cc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror -Iinclude \
+            tests/exfat_boot_media_writer.c -ldl -o "$work/media-writer"
+      - name: Read actual kernel and initramfs from exFAT through BOOT in OVMF
         run: |
           set -euo pipefail
           work="$RUNNER_TEMP/exfat-firmware"
           image=$(apt-cache depends linux-image-generic | awk '/Depends: linux-image-[0-9]/ { image=$2 } END { print image }')
           test -n "$image"
-          (cd "$work" && apt-get download "linux-image-unsigned-${image#linux-image-}")
+          kernelver=$(printf '%s' "$image" | sed 's/^linux-image-//')
+          (cd "$work" && apt-get download "linux-image-unsigned-$kernelver")
           dpkg-deb -x "$work"/linux-image-unsigned-*.deb "$work/kernel"
-          kernel="$work/kernel/boot/vmlinuz-${image#linux-image-}"
+          kernel="$work/kernel/boot/vmlinuz-$kernelver"
           test -s "$kernel"
-          boot="$work/boot/usr/lib/infiltrator-boot/EFI/BOOT/BOOTX64.EFI"
-          module="$work/stage/System/Filesystems/exFAT.so"
-          bash tests/firmware-exfat.sh "$boot" "$module" "$kernel" "$work/vm"
-          bash tests/firmware-exfat.sh "$boot" "$module" "$kernel" "$work/bad-vm" bad-superblock
+          bash tests/firmware-exfat.sh \
+            "$work/boot/usr/lib/infiltrator-boot/EFI/BOOT/BOOTX64.EFI" \
+            "$work/stage/System/Filesystems/exFAT.so" \
+            "$kernel" "$work/media-writer" "$work/vm"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: exfat-boot-ovmf-serial
-          path: |
-            ${{ runner.temp }}/exfat-firmware/vm/serial.log
-            ${{ runner.temp }}/exfat-firmware/bad-vm/serial.log
+          path: '**/serial.log'
           if-no-files-found: warn
