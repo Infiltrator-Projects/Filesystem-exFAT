@@ -72,6 +72,43 @@ jobs:
           build/boot-read-test "$packaged" "$work/exfat.img"
           ! nm -D --defined-only "$packaged" | grep -E 'infiltrator_filesystem_.*_v1|infiltrator_filesystem_module_v[345]'
           ! find build/package-root -name '*.ko' | grep .
+      - name: Qualify a real EFI-stub kernel and initramfs in OVMF
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cpio busybox-static gdisk mtools qemu-system-x86 ovmf
+          cc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror \
+            -Iinclude tests/exfat_boot_media_writer.c -ldl -o build/exfat-boot-media-writer
+          stage="$RUNNER_TEMP/exfat-boot-vm"
+          mkdir -p "$stage"
+          boot=infiltrator-boot_0.1.69_amd64.deb
+          curl -fsSL --retry 3 \
+            "https://github.com/Infiltrator-Projects/Boot/releases/download/v0.1.69/$boot" \
+            -o "$stage/$boot"
+          printf '%s  %s\n' \
+            73429727974a902372f7d2644d00bb1f527e42b4454f9f3cafbf8ef1ad6c9a8e \
+            "$stage/$boot" | sha256sum -c -
+          dpkg-deb -x "$stage/$boot" "$stage/boot-package"
+          img=$(apt-cache depends linux-image-generic | awk '/Depends: linux-image-[0-9]/ { image=$2 } END { print image }')
+          test -n "$img"
+          kernelver=$(printf '%s' "$img" | sed 's/^linux-image-//')
+          (cd "$stage" && apt-get download "linux-image-unsigned-$kernelver")
+          dpkg-deb -x "$stage"/linux-image-unsigned-*.deb "$stage/kernel"
+          kernel="$stage/kernel/boot/vmlinuz-$kernelver"
+          test -s "$kernel"
+          bash tests/firmware-exfat.sh \
+            "$stage/boot-package/usr/lib/infiltrator-boot/EFI/BOOT/BOOTX64.EFI" \
+            "build/package-root/System/Filesystems/exFAT.so" \
+            "$kernel" "$PWD/build/exfat-boot-media-writer" "$stage/vm"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: exfat-ovmf-serial
+          path: '**/serial.log'
+          if-no-files-found: warn
+          retention-days: 14
       - uses: actions/upload-artifact@v4
         with:
           name: exfat-v2-unreleased-${{ github.sha }}
