@@ -57,6 +57,14 @@ jobs:
           build/boot-read-test build/exFAT.so "$work/corrupt.img" --reject-corrupt
           build/boot-read-test build/unified/firmware/exFAT.so \
             "$work/corrupt.img" --reject-corrupt
+          cc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror \
+            tests/exfat_mutate_geometry.c -o build/exfat-mutate-geometry
+          cp "$work/exfat.img" "$work/bad-layout.img"
+          build/exfat-mutate-geometry "$work/bad-layout.img"
+          # A recalculated correct checksum may NOT hide invalid FAT geometry.
+          build/boot-read-test build/exFAT.so "$work/bad-layout.img" --reject-corrupt
+          build/boot-read-test build/unified/firmware/exFAT.so \
+            "$work/bad-layout.img" --reject-corrupt
           (cd "$work" && sha256sum -c before.sha256)
       - name: Create portable DEB and source-embedded RUN without a kernel module
         run: |

@@ -64,6 +64,44 @@ static int boot_checksum(const IfsFsHostRuntimeV2 *host,uint32_t sector)
     }
     return IFS_FS_OK;
 }
+/* Bound the native FAT and data-cluster structures using the actual boot
+ * sector geometry. An internally consistent checksum alone is insufficient:
+ * a corrupt-but-rechecksummed FAT offset must never reach FatFs or BOOT.
+ */
+static uint32_t exfat_le32(const uint8_t *p)
+{
+    return (uint32_t)p[0] | ((uint32_t)p[1]<<8) |
+           ((uint32_t)p[2]<<16) | ((uint32_t)p[3]<<24);
+}
+static uint64_t exfat_le64(const uint8_t *p)
+{
+    return (uint64_t)exfat_le32(p) |
+        ((uint64_t)exfat_le32(p+4)<<32);
+}
+static int exfat_layout(const uint8_t b[512],
+                        const IfsFsHostRuntimeV2 *h,uint32_t sector)
+{
+    const uint64_t volume=exfat_le64(b+72);
+    const uint64_t fat_offset=exfat_le32(b+80);
+    const uint64_t fat_sectors=exfat_le32(b+84);
+    const uint64_t heap_start=exfat_le32(b+88);
+    const uint64_t clusters=exfat_le32(b+92);
+    const uint64_t root=exfat_le32(b+96);
+    const uint64_t sector_per_cluster=UINT64_C(1)<<b[109];
+    const uint32_t rev=(uint32_t)b[104]|((uint32_t)b[105]<<8);
+    if(rev!=0x0100u || b[110]!=1u)
+        return IFS_FS_UNSUPPORTED; /* TexFAT or unrecognised revision */
+    if(!volume || volume>h->volume_bytes/sector ||
+       fat_offset<24u || !fat_sectors || !clusters ||
+       clusters>0xfffffff5u || root<2u || root>clusters+1u ||
+       fat_offset+fat_sectors>heap_start ||
+       fat_sectors*(uint64_t)sector<(clusters+2u)*4u ||
+       heap_start+clusters*sector_per_cluster>volume ||
+       (sector_per_cluster*(uint64_t)sector)>UINT64_C(33554432) ||
+       (b[112]>100u&&b[112]!=0xffu))
+        return IFS_FS_CORRUPT;
+    return IFS_FS_OK;
+}
 static int geometry(const IfsFsHostRuntimeV2 *h,uint32_t *sector,uint32_t *cluster){
     uint8_t b[512];if(!host_ok(h))return IFS_FS_INVALID;
     int status=ifs_fs_host_read_bytes_v2(h,0u,b,sizeof(b));
@@ -75,7 +113,9 @@ static int geometry(const IfsFsHostRuntimeV2 *h,uint32_t *sector,uint32_t *clust
         return IFS_FS_CORRUPT;
     *sector=1u<<b[108];*cluster=*sector*(1u<<b[109]);
     if (*sector != h->logical_sector_bytes) return IFS_FS_CORRUPT;
-    return boot_checksum(h,*sector);
+    status=boot_checksum(h,*sector);
+    if(status!=IFS_FS_OK)return status;
+    return exfat_layout(b,h,*sector);
 }
 static IfsFatfsIo native(const IfsFsHostRuntimeV2 *h,uint32_t sector){
     IfsFatfsIo io={0};io.user=(void *)h;io.partition_bytes=h->volume_bytes;
