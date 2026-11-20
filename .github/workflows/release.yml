@@ -112,6 +112,8 @@ jobs:
           build/boot-validate-module "$module"
           build/boot-read-test "$module" "$RUNNER_TEMP/exfat-boot-fixture/exfat.img"
           ! nm -D --defined-only "$module" | grep -E 'infiltrator_filesystem_.*_v1|infiltrator_filesystem_module_v[345]'
+          ! nm -a "$module" | grep -E 'ifs_bind_services|ifs_unbind_services|ifs_exfat_worker_main|infiltrator_filesystem_.*_v1'
+          ! readelf -d "$module" | grep -E 'libcrypto\.so|libsqlite3\.so'
           ! find "$native/extracted" -name '*.ko' | grep .
           (cd "$RUNNER_TEMP/exfat-boot-fixture" && sha256sum -c before.sha256)
       - name: Qualify a real EFI-stub kernel and initramfs in OVMF
@@ -151,13 +153,54 @@ jobs:
           path: '**/serial.log'
           if-no-files-found: warn
           retention-days: 14
+      - name: Hash the exact qualified package binaries
+        run: (cd dist && sha256sum ./*.deb ./*.run > SHA256SUMS.txt)
       - uses: actions/upload-artifact@v4
         with:
           name: exfat-v2-unreleased-${{ github.sha }}
           path: dist/*
           if-no-files-found: error
           retention-days: 14
-# No publish job: BOOT's loader and complete OVMF kernel/initramfs handoff
-# must pass using the packaged V2 binary before a new version is released.
-# Native sources for historical exfat.ko tests remain in the repository,
-# but kernel objects are neither packaged nor published as V2 substitutes.
+
+  publish-v2:
+    needs: qualify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/download-artifact@v4
+        with:
+          name: exfat-v2-unreleased-${{ github.sha }}
+          path: dist
+      - name: Publish BOOT-qualified Common V2 modules only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version=$(tr -d '\r\n' < VERSION)
+          tag="v$version"
+          test "$(find dist -maxdepth 1 -name '*.deb' | wc -l)" -eq 1
+          test "$(find dist -maxdepth 1 -name '*.run' | wc -l)" -eq 1
+          test "$(find dist -maxdepth 1 -name SHA256SUMS.txt | wc -l)" -eq 1
+          ! find dist -name '*.ko' | grep .
+          (cd dist && sha256sum -c SHA256SUMS.txt)
+          deb="dist/infiltrator-filesystem-exfat_${version}_amd64.deb"
+          run="dist/filesystem-exfat-${version}-native-installer.run"
+          test -s "$deb" && test -s "$run"
+          mkdir -p "$RUNNER_TEMP/root"
+          dpkg-deb -x "$deb" "$RUNNER_TEMP/root"
+          test "$(find "$RUNNER_TEMP/root" -type f | wc -l)" -eq 2
+          so="$RUNNER_TEMP/root/System/Filesystems/exFAT.so"
+          readelf -SW "$so" | grep -F '.infiltrator_boot'
+          nm -D --defined-only "$so" | grep -F infiltrator_filesystem_api_v2
+          ! nm -a "$so" | grep -E 'ifs_bind_services|ifs_unbind_services|ifs_exfat_worker_main|infiltrator_filesystem_.*_v1'
+          if gh release view "$tag" --json tagName >/dev/null 2>&1; then
+            test "$(gh release view "$tag" --json targetCommitish --jq .targetCommitish)" = "$GITHUB_SHA" || exit 1
+            exit 0
+          fi
+          gh release create "$tag" "$deb" "$run" dist/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" \
+            --title "exFAT Common V2 firmware reader $version" \
+            --notes "BOOT-qualified freestanding/hosted native exFAT V2 SO: both DEB and RUN, BOOT ELF loader, OVMF kernel/initramfs and corrupt-image rejection passed. No V1 runtime or kernel driver. Historical defragmenter code is retained for separately qualified V2 migration."
