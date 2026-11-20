@@ -79,6 +79,28 @@ jobs:
           build/boot-read-test "$packaged" "$work/exfat.img"
           ! nm -D --defined-only "$packaged" | grep -E 'infiltrator_filesystem_.*_v1|infiltrator_filesystem_module_v[345]'
           ! find build/package-root -name '*.ko' | grep .
+      - name: Verify source-embedded native RUN and its exact filesystem package
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(tr -d '\r\n' < VERSION)
+          native="$RUNNER_TEMP/exfat-native-v2"
+          bash "dist/filesystem-exfat-$version-native-installer.run" \
+            --profile aggressive --system-package-mode --build-only \
+            --output "$native"
+          deb="$native/infiltrator-filesystem-exfat_$version+native1_amd64.deb"
+          test -s "$deb"
+          test "$(dpkg-deb -f "$deb" X-Infiltrator-Native-Profile)" = aggressive
+          mkdir -p "$native/extracted"
+          dpkg-deb -x "$deb" "$native/extracted"
+          test "$(find "$native/extracted" -type f | wc -l)" -eq 2
+          module="$native/extracted/System/Filesystems/exFAT.so"
+          test -s "$module"
+          build/boot-validate-module "$module"
+          build/boot-read-test "$module" "$RUNNER_TEMP/exfat-boot-fixture/exfat.img"
+          ! nm -D --defined-only "$module" | grep -E 'infiltrator_filesystem_.*_v1|infiltrator_filesystem_module_v[345]'
+          ! find "$native/extracted" -name '*.ko' | grep .
+          (cd "$RUNNER_TEMP/exfat-boot-fixture" && sha256sum -c before.sha256)
       - name: Qualify a real EFI-stub kernel and initramfs in OVMF
         shell: bash
         run: |
