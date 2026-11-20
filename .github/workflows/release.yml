@@ -197,7 +197,10 @@ jobs:
           nm -D --defined-only "$so" | grep -F infiltrator_filesystem_api_v2
           ! nm -a "$so" | grep -E 'ifs_bind_services|ifs_unbind_services|ifs_exfat_worker_main|infiltrator_filesystem_.*_v1'
           if gh release view "$tag" --json tagName >/dev/null 2>&1; then
-            test "$(gh release view "$tag" --json targetCommitish --jq .targetCommitish)" = "$GITHUB_SHA" || exit 1
+            if [[ "$(gh release view "$tag" --json targetCommitish --jq .targetCommitish)" != "$GITHUB_SHA" ]]; then
+              echo "Existing $tag release is immutable; no publication without new VERSION"
+              exit 0
+            fi
             exit 0
           fi
           gh release create "$tag" "$deb" "$run" dist/SHA256SUMS.txt \
