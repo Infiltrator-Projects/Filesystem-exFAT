@@ -86,6 +86,11 @@ jobs:
           readelf -S "$packaged" | grep -F '.infiltrator_boot'
           build/boot-read-test "$packaged" "$work/exfat.img"
           ! nm -D --defined-only "$packaged" | grep -E 'infiltrator_filesystem_.*_v1|infiltrator_filesystem_module_v[345]'
+          # Full symbol table and dynamic dependencies must contain no V1
+          # callbacks, worker entrypoint, POSIX-bound service trampoline, or
+          # obsolete OpenSSL/SQLite dependency retained by legacy workers.
+          ! nm -a "$packaged" | grep -E 'ifs_bind_services|ifs_unbind_services|ifs_exfat_worker_main|infiltrator_filesystem_.*_v1'
+          ! readelf -d "$packaged" | grep -E 'libcrypto\.so|libsqlite3\.so'
           ! find build/package-root -name '*.ko' | grep .
       - name: Verify source-embedded native RUN and its exact filesystem package
         shell: bash

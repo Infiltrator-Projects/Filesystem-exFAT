@@ -3,9 +3,6 @@ file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" FILESYSTEM_VERSION LIMIT_COUN
 project(FilesystemExFATLinux VERSION ${FILESYSTEM_VERSION} LANGUAGES C)
 include(CTest)
 include(FetchContent)
-find_package(OpenSSL REQUIRED)
-find_package(SQLite3 REQUIRED)
-find_package(Threads REQUIRED)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -45,15 +42,14 @@ add_custom_command(OUTPUT "${EXFAT_FIRMWARE_ELF}"
     "${infiltratr_common_SOURCE_DIR}/include/infiltratr/filesystem_module_v2.h"
   VERBATIM)
 add_custom_target(exfat-firmware-elf DEPENDS "${EXFAT_FIRMWARE_ELF}")
+# Common V2 is the ONLY shipped filesystem runtime.
+# Retain source-owned historical defrag workers under native/defrag for
+# separate migration and regression; their V1 host service tables and POSIX
+# device/journal dependencies are not linked into exFAT.so or its DEB/RUN.
+# The exposed V2 CORE and VOLUME operations are implemented by FatFs.
 add_library(exfat-unified SHARED
  "${EXAPI}/exfat_module.c" module/exfat_common.c
- "${FATFS}/ff.c" "${FATFS}/ffunicode.c"
- "${EX_SRC}/exfat_common.c" "${EX_SRC}/exfat_plan.c"
- "${EX_SRC}/exfat_relayout.c" "${EX_SRC}/exfat_worker.c"
- compat/legacy_services.c compat/runtime_alloc.c
- compat/exfat_extra_host.c)
-set_source_files_properties("${EX_SRC}/exfat_worker.c" PROPERTIES
- COMPILE_DEFINITIONS "main=ifs_exfat_worker_main")
+ "${FATFS}/ff.c" "${FATFS}/ffunicode.c")
 target_include_directories(exfat-unified PRIVATE
  "${EX_SRC}" "${FATFS}" "${EXAPI}" "${CMAKE_CURRENT_SOURCE_DIR}/compat"
  "${CMAKE_CURRENT_SOURCE_DIR}/include")
@@ -62,8 +58,7 @@ target_compile_definitions(exfat-unified PRIVATE
 target_compile_options(exfat-unified PRIVATE
  -Wall -Wextra -Wpedantic -Werror -fvisibility=hidden)
 target_link_options(exfat-unified PRIVATE -Wl,-z,defs)
-target_link_libraries(exfat-unified PRIVATE
- InfiltratrCommon::Common OpenSSL::Crypto SQLite::SQLite3 Threads::Threads)
+target_link_libraries(exfat-unified PRIVATE InfiltratrCommon::Common)
 set_target_properties(exfat-unified PROPERTIES PREFIX "" OUTPUT_NAME "exFAT" SUFFIX ".so")
 add_dependencies(exfat-unified exfat-firmware-elf)
 set_property(TARGET exfat-unified APPEND PROPERTY LINK_DEPENDS "${EXFAT_FIRMWARE_ELF}")
