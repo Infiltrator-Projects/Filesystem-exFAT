@@ -23,6 +23,28 @@ set_property(DIRECTORY "${infiltratr_common_SOURCE_DIR}" PROPERTY EXCLUDE_FROM_A
 set(EX_SRC "${CMAKE_CURRENT_SOURCE_DIR}/native/defrag")
 set(FATFS "${CMAKE_CURRENT_SOURCE_DIR}/native/portable/fatfs")
 set(EXAPI "${CMAKE_CURRENT_SOURCE_DIR}/native/filesystems/exfat/module")
+# Build a freestanding, no-import executable of the SAME exFAT engine,
+# then embed that exact ELF in the hosted package carrier.
+if(NOT CMAKE_OBJCOPY)
+  find_program(CMAKE_OBJCOPY NAMES objcopy llvm-objcopy REQUIRED)
+endif()
+set(EXFAT_FIRMWARE_DIR "${CMAKE_CURRENT_BINARY_DIR}/firmware")
+set(EXFAT_FIRMWARE_ELF "${EXFAT_FIRMWARE_DIR}/exFAT.so")
+add_custom_command(OUTPUT "${EXFAT_FIRMWARE_ELF}"
+  COMMAND "${CMAKE_COMMAND}" -S "${CMAKE_CURRENT_SOURCE_DIR}/module/firmware"
+    -B "${EXFAT_FIRMWARE_DIR}" -DCMAKE_BUILD_TYPE=Release
+    "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
+    "-DCOMMON_INCLUDE_DIR=${infiltratr_common_SOURCE_DIR}/include"
+  COMMAND "${CMAKE_COMMAND}" --build "${EXFAT_FIRMWARE_DIR}" --parallel 2
+  DEPENDS module/firmware/CMakeLists.txt module/exfat_common.c
+    native/filesystems/exfat/module/exfat_module.c
+    native/portable/fatfs/fatfs_module.c
+    native/portable/fatfs/fatfs_libc.c
+    native/portable/fatfs/ff.c native/portable/fatfs/ffunicode.c
+    native/portable/fatfs/ffconf.h
+    "${infiltratr_common_SOURCE_DIR}/include/infiltratr/filesystem_module_v2.h"
+  VERBATIM)
+add_custom_target(exfat-firmware-elf DEPENDS "${EXFAT_FIRMWARE_ELF}")
 add_library(exfat-unified SHARED
  "${EXAPI}/exfat_module.c" module/exfat_common.c
  "${FATFS}/ff.c" "${FATFS}/ffunicode.c"
@@ -43,6 +65,14 @@ target_link_options(exfat-unified PRIVATE -Wl,-z,defs)
 target_link_libraries(exfat-unified PRIVATE
  InfiltratrCommon::Common OpenSSL::Crypto SQLite::SQLite3 Threads::Threads)
 set_target_properties(exfat-unified PROPERTIES PREFIX "" OUTPUT_NAME "exFAT" SUFFIX ".so")
+add_dependencies(exfat-unified exfat-firmware-elf)
+set_property(TARGET exfat-unified APPEND PROPERTY LINK_DEPENDS "${EXFAT_FIRMWARE_ELF}")
+add_custom_command(TARGET exfat-unified POST_BUILD
+  COMMAND "${CMAKE_OBJCOPY}" --add-section
+    ".infiltrator_boot=${EXFAT_FIRMWARE_ELF}"
+    --set-section-flags .infiltrator_boot=readonly
+    "$<TARGET_FILE:exfat-unified>"
+  VERBATIM)
 if(BUILD_TESTING)
  add_executable(exfat-unified-contract tests/test_unified_module.c)
  target_include_directories(exfat-unified-contract PRIVATE
