@@ -31,6 +31,26 @@ jobs:
             "$RUNNER_TEMP/Boot/packaging/validate-module.c" -o build/boot-validate-module
           build/boot-validate-module build/exFAT.so
           build/boot-validate-module build/unified/firmware/exFAT.so
+      - name: Exercise BOOT's relocated Common V2 reader with real file data
+        shell: bash
+        run: |
+          set -euo pipefail
+          cc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror \
+            -I"$RUNNER_TEMP/Boot/boot" -Iinclude \
+            "$RUNNER_TEMP/Boot/boot/so_elf.c" tests/exfat_boot_v2_test.c \
+            -o build/boot-read-test
+          work="$RUNNER_TEMP/exfat-boot-fixture"
+          mkdir -p "$work"
+          truncate -s 128M "$work/exfat.img" "$work/fat32.img"
+          mkfs.exfat -n BOOTV2 "$work/exfat.img"
+          mkfs.fat -F 32 -I "$work/fat32.img"
+          # Native V2 test writes disposable contents, then reformats to a
+          # 4 KiB-sector real exFAT and writes deterministic /FOURK.BIN.
+          build/exfat-realimage-test build/exFAT.so "$work/exfat.img" "$work/fat32.img"
+          sha256sum "$work/exfat.img" > "$work/before.sha256"
+          build/boot-read-test build/exFAT.so "$work/exfat.img"
+          build/boot-read-test build/unified/firmware/exFAT.so "$work/exfat.img"
+          (cd "$work" && sha256sum -c before.sha256)
       - name: Create portable DEB and source-embedded RUN without a kernel module
         run: |
           set -euo pipefail
@@ -43,8 +63,13 @@ jobs:
           dpkg-deb -x "$deb" build/package-root
           test "$(find build/package-root -type f | wc -l)" -eq 2
           packaged=build/package-root/System/Filesystems/exFAT.so
-          cmp "$packaged" build/exFAT.so
+          work="$RUNNER_TEMP/exfat-boot-fixture"
+          # Portable and source-embedded builds intentionally use different
+          # optimizations, so equality of their entire ELF bytes is NOT an ABI test.
+          # Validate the exact binary that actually goes into the DEB.
           build/boot-validate-module "$packaged"
+          readelf -S "$packaged" | grep -F '.infiltrator_boot'
+          build/boot-read-test "$packaged" "$work/exfat.img"
           ! nm -D --defined-only "$packaged" | grep -E 'infiltrator_filesystem_.*_v1|infiltrator_filesystem_module_v[345]'
           ! find build/package-root -name '*.ko' | grep .
       - uses: actions/upload-artifact@v4
