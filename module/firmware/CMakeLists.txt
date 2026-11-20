@@ -12,7 +12,6 @@ set(EXAPI "${CMAKE_CURRENT_SOURCE_DIR}/../../native/filesystems/exfat/module")
 add_library(exfat-boot MODULE
   ../exfat_common.c
   "${EXAPI}/exfat_module.c"
-  "${FATFS}/fatfs_module.c"
   "${FATFS}/fatfs_libc.c"
   "${FATFS}/ff.c"
   "${FATFS}/ffunicode.c")
