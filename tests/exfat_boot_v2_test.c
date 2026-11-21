@@ -22,6 +22,7 @@ typedef struct {
     uint64_t bytes;
     uint32_t sector;
     unsigned reads;
+    int fault_reads;
 } Disk;
 static void *elf_allocate(void *unused, size_t bytes)
 {
@@ -49,6 +50,7 @@ static int read_sectors(void *ctx, uint64_t pos, void *dst, uint32_t count)
        count>disk->bytes-pos || pos>INT64_MAX)
         return -1;
     ++disk->reads;
+    if(disk->fault_reads)return -1;
     return fseeko(disk->file,(off_t)pos,SEEK_SET)==0 &&
            fread(dst,1,count,disk->file)==count?0:-1;
 }
@@ -154,6 +156,10 @@ int main(int argc,char **argv)
     for(unsigned i=0;i<177;++i)
         ENSURE(data[i]==(uint8_t)((i+17u)*31u+7u));
     ENSURE(core->read(volume,"/FOURK.BIN",UINT64_MAX,data,1u)!=IFS_FS_OK);
+    disk.fault_reads=1;
+    int io_status=core->read(volume,"/FOURK.BIN",4096u,data,4096u);
+    disk.fault_reads=0;
+    ENSURE(io_status==IFS_FS_IO_ERROR);
     ENSURE(core->unmount(volume)==IFS_FS_OK);
     ENSURE(disk.reads>0 && fclose(disk.file)==0);
     BootSoUnload(&image);

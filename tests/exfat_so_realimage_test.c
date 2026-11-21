@@ -14,9 +14,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-typedef struct { int fd; uint64_t size; uint32_t sector; unsigned writes,flushes; } Image;
+typedef struct { int fd; uint64_t size; uint32_t sector; unsigned writes,flushes; int fault_reads; } Image;
 static int read_at(void *ctx,uint64_t at,void *p,uint32_t n) {
     Image *d=ctx;
+    if(d->fault_reads)return -1;
     return p && d->sector && !(at % d->sector) && !(n % d->sector) &&
         at<=d->size && n<=d->size-at && at<=INT64_MAX &&
         pread(d->fd,p,n,(off_t)at)==(ssize_t)n ? 0 : -1;
@@ -147,10 +148,20 @@ int main(int argc,char **argv) {
     if(core->rename(mounted,"/TESTDIR/INPUT.BIN","/TESTDIR/OUTPUT.BIN")!=IFS_FS_OK ||
        core->stat(mounted,"/TESTDIR/OUTPUT.BIN",&entry)!=IFS_FS_OK ||
        entry.size_bytes!=sizeof(data) ||
+       core->stat(mounted,"/TESTDIR/NO-SUCH-FILE",&entry)!=IFS_FS_NOT_FOUND ||
+       core->read(mounted,"/TESTDIR/NO-SUCH-FILE",0u,back,1u)!=IFS_FS_NOT_FOUND ||
+       core->read(mounted,"/TESTDIR/OUTPUT.BIN",8191u,back,2u)!=IFS_FS_INVALID ||
        core->read(mounted,"/TESTDIR/OUTPUT.BIN",UINT64_MAX,back,1u)==IFS_FS_OK ||
        core->create(mounted,"/TESTDIR/CHILD",IFS_FS_ENTRY_DIRECTORY)!=IFS_FS_OK ||
        core->rename(mounted,"/TESTDIR","/TESTDIR/CHILD/LOOP")==IFS_FS_OK)
-        return fail("V2 rename, size, bounds or recursive directory safety");
+        return fail("V2 rename, missing paths, bounds or recursive directory safety");
+    /* Inject an actual host I/O failure after a successful mount. Missing
+     * files and hardware errors must not be reported interchangeably. */
+    d.fault_reads=1;
+    int fault_result=core->read(mounted,"/TESTDIR/OUTPUT.BIN",4096u,back,4096u);
+    d.fault_reads=0;
+    if(fault_result!=IFS_FS_IO_ERROR)
+        return fail("V2 read failed to preserve an injected device I/O error");
     if(core->truncate(mounted,"/TESTDIR/OUTPUT.BIN",4096u)!=IFS_FS_OK ||
        vol->sync(mounted)!=IFS_FS_OK ||
        core->unmount(mounted)!=IFS_FS_OK || !d.writes || !d.flushes)
