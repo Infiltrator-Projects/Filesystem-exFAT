@@ -22,23 +22,12 @@ jobs:
           make test
           test -s build/unified/firmware/exFAT.so
           ! readelf -d build/unified/firmware/exFAT.so | grep '(NEEDED)'
-      - name: Check actual production BOOT validator against carrier and firmware ELF
-        run: |
-          set -euo pipefail
-          git clone --depth 1 https://github.com/Infiltrator-Projects/Boot.git "$RUNNER_TEMP/Boot"
-          cc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror \
-            "$RUNNER_TEMP/Boot/boot/so_elf.c" \
-            "$RUNNER_TEMP/Boot/packaging/validate-module.c" -o build/boot-validate-module
-          build/boot-validate-module build/exFAT.so
-          build/boot-validate-module build/unified/firmware/exFAT.so
-      - name: Exercise BOOT's relocated Common V2 reader with real file data
+      - name: Exercise the embedded V2 firmware on valid and corrupt exFAT media
         shell: bash
         run: |
           set -euo pipefail
-          cc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror \
-            -I"$RUNNER_TEMP/Boot/boot" -Iinclude \
-            "$RUNNER_TEMP/Boot/boot/so_elf.c" tests/exfat_boot_v2_test.c \
-            -o build/boot-read-test
+          cc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror -Iinclude \
+            tests/exfat_boot_v2_test.c -ldl -o build/exfat-firmware-test
           work="$RUNNER_TEMP/exfat-boot-fixture"
           mkdir -p "$work"
           truncate -s 128M "$work/exfat.img" "$work/fat32.img"
@@ -48,22 +37,22 @@ jobs:
           # 4 KiB-sector real exFAT and writes deterministic /FOURK.BIN.
           build/exfat-realimage-test build/exFAT.so "$work/exfat.img" "$work/fat32.img"
           sha256sum "$work/exfat.img" > "$work/before.sha256"
-          build/boot-read-test build/exFAT.so "$work/exfat.img"
-          build/boot-read-test build/unified/firmware/exFAT.so "$work/exfat.img"
+          bash tests/read-firmware-media.sh build/exfat-firmware-test build/exFAT.so "$work/exfat.img"
+          bash tests/read-firmware-media.sh build/exfat-firmware-test build/unified/firmware/exFAT.so "$work/exfat.img"
           # Corrupt a disposable COPY of the boot checksum sector, not source.
           cp "$work/exfat.img" "$work/corrupt.img"
           dd if=/dev/zero of="$work/corrupt.img" bs=4096 seek=11 count=1 \
              conv=notrunc status=none
-          build/boot-read-test build/exFAT.so "$work/corrupt.img" --reject-corrupt
-          build/boot-read-test build/unified/firmware/exFAT.so \
+          bash tests/read-firmware-media.sh build/exfat-firmware-test build/exFAT.so "$work/corrupt.img" --reject-corrupt
+          bash tests/read-firmware-media.sh build/exfat-firmware-test build/unified/firmware/exFAT.so \
             "$work/corrupt.img" --reject-corrupt
           cc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror \
             tests/exfat_mutate_geometry.c -o build/exfat-mutate-geometry
           cp "$work/exfat.img" "$work/bad-layout.img"
           build/exfat-mutate-geometry "$work/bad-layout.img"
           # A recalculated correct checksum may NOT hide invalid FAT geometry.
-          build/boot-read-test build/exFAT.so "$work/bad-layout.img" --reject-corrupt
-          build/boot-read-test build/unified/firmware/exFAT.so \
+          bash tests/read-firmware-media.sh build/exfat-firmware-test build/exFAT.so "$work/bad-layout.img" --reject-corrupt
+          bash tests/read-firmware-media.sh build/exfat-firmware-test build/unified/firmware/exFAT.so \
             "$work/bad-layout.img" --reject-corrupt
           (cd "$work" && sha256sum -c before.sha256)
       - name: Create portable DEB and source-embedded RUN without a kernel module
@@ -82,9 +71,8 @@ jobs:
           # Portable and source-embedded builds intentionally use different
           # optimizations, so equality of their entire ELF bytes is NOT an ABI test.
           # Validate the exact binary that actually goes into the DEB.
-          build/boot-validate-module "$packaged"
           readelf -S "$packaged" | grep -F '.infiltrator_boot'
-          build/boot-read-test "$packaged" "$work/exfat.img"
+          bash tests/read-firmware-media.sh build/exfat-firmware-test "$packaged" "$work/exfat.img"
           ! nm -D --defined-only "$packaged" | grep -E 'infiltrator_filesystem_.*_v1|infiltrator_filesystem_module_v[345]'
           # Full symbol table and dynamic dependencies must contain no V1
           # callbacks, worker entrypoint, POSIX-bound service trampoline, or
@@ -109,8 +97,7 @@ jobs:
           test "$(find "$native/extracted" -type f | wc -l)" -eq 2
           module="$native/extracted/System/Filesystems/exFAT.so"
           test -s "$module"
-          build/boot-validate-module "$module"
-          build/boot-read-test "$module" "$RUNNER_TEMP/exfat-boot-fixture/exfat.img"
+          bash tests/read-firmware-media.sh build/exfat-firmware-test "$module" "$RUNNER_TEMP/exfat-boot-fixture/exfat.img"
           ! nm -D --defined-only "$module" | grep -E 'infiltrator_filesystem_.*_v1|infiltrator_filesystem_module_v[345]'
           ! nm -a "$module" | grep -E 'ifs_bind_services|ifs_unbind_services|ifs_exfat_worker_main|infiltrator_filesystem_.*_v1'
           ! readelf -d "$module" | grep -E 'libcrypto\.so|libsqlite3\.so'
@@ -127,14 +114,10 @@ jobs:
             -Iinclude tests/exfat_boot_media_writer.c -ldl -o build/exfat-boot-media-writer
           stage="$RUNNER_TEMP/exfat-boot-vm"
           mkdir -p "$stage"
-          boot=infiltrator-boot_0.1.72_amd64.deb
-          curl -fsSL --retry 3 \
-            "https://github.com/Infiltrator-Projects/Boot/releases/download/v0.1.72/$boot" \
-            -o "$stage/$boot"
-          printf '%s  %s\n' \
-            baed6e8e3d8be51a61ea180e7f8d3b4fb204881a472795c518fe46dbfce1c9a5 \
-            "$stage/$boot" | sha256sum -c -
-          dpkg-deb -x "$stage/$boot" "$stage/boot-package"
+          source tests/require-rebuilt-boot.sh
+          "$IFS_BOOT_VALIDATOR" build/package-root/System/Filesystems/exFAT.so
+          native="$RUNNER_TEMP/exfat-native-v2"
+          "$IFS_BOOT_VALIDATOR" "$native/extracted/System/Filesystems/exFAT.so"
           img=$(apt-cache depends linux-image-generic | awk '/Depends: linux-image-[0-9]/ { image=$2 } END { print image }')
           test -n "$img"
           kernelver=$(printf '%s' "$img" | sed 's/^linux-image-//')
@@ -143,7 +126,7 @@ jobs:
           kernel="$stage/kernel/boot/vmlinuz-$kernelver"
           test -s "$kernel"
           bash tests/firmware-exfat.sh \
-            "$stage/boot-package/usr/lib/infiltrator-boot/EFI/BOOT/BOOTX64.EFI" \
+            "$IFS_BOOT_EFI" \
             "build/package-root/System/Filesystems/exFAT.so" \
             "$kernel" "$PWD/build/exfat-boot-media-writer" "$stage/vm"
       - uses: actions/upload-artifact@v4

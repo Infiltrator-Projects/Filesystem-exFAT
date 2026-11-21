@@ -24,14 +24,7 @@ jobs:
           set -euo pipefail
           work="$RUNNER_TEMP/exfat-firmware"
           mkdir -p "$work"
-          boot=infiltrator-boot_0.1.72_amd64.deb
-          curl -fsSL --retry 3 \
-            "https://github.com/Infiltrator-Projects/Boot/releases/download/v0.1.72/$boot" \
-            -o "$work/$boot"
-          printf '%s  %s\n' \
-            d72bd059c175424cef33e18ec2be9754d50e4afcdf67d088c89faa54363e9e4a \
-            "$work/$boot" | sha256sum -c -
-          dpkg-deb -x "$work/$boot" "$work/boot"
+          bash tests/require-rebuilt-boot.sh
       - name: Validate both standalone firmware ELF and installed host carrier
         run: |
           set -euo pipefail
@@ -42,7 +35,7 @@ jobs:
           test -s "$work/build/exFAT.so" && test -s "$work/build/firmware/exFAT.so"
           nm -D --defined-only "$work/build/exFAT.so" | grep -F infiltrator_filesystem_api_v2
           ! nm -D --defined-only "$work/build/exFAT.so" | grep -E 'infiltrator_filesystem_.*_v1|infiltrator_filesystem_module_v[345]'
-          validator="$work/boot/usr/lib/infiltrator-boot/validate-module"
+          validator="$IFS_BOOT_VALIDATOR"
           "$validator" "$work/build/firmware/exFAT.so"
           "$validator" "$work/build/exFAT.so"
           DESTDIR="$work/stage" cmake --install "$work/build"
@@ -62,7 +55,7 @@ jobs:
           kernel="$work/kernel/boot/vmlinuz-$kernelver"
           test -s "$kernel"
           bash tests/firmware-exfat.sh \
-            "$work/boot/usr/lib/infiltrator-boot/EFI/BOOT/BOOTX64.EFI" \
+            "$IFS_BOOT_EFI" \
             "$work/stage/System/Filesystems/exFAT.so" \
             "$kernel" "$work/media-writer" "$work/vm"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

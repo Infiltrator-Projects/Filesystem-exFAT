@@ -1,20 +1,18 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later
- * Execute the real production BOOT ELF loader against a disposable exFAT.
- * The fixture is written by the independent hosted Common V2 image test.
- * This tests the freestanding code, not dlopen() or a private FatFs hook.
+ * Exercise the exact freestanding ELF from an exFAT release candidate through
+ * Common V2 on an isolated host. The consumer's validator and OVMF run in CI.
  */
 #define _GNU_SOURCE
-#include "so_elf.h"
+#include <dlfcn.h>
 #include <infiltratr/filesystem_module_v2.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/mman.h>
 #include <sys/stat.h>
 
 #define ENSURE(condition) do { if (!(condition)) { \
-    fprintf(stderr, "EXFAT-BOOT-V2 FAIL line %d: %s\n", __LINE__, #condition); \
+    fprintf(stderr, "EXFAT-FREESTANDING-V2 FAIL line %d: %s\n", __LINE__, #condition); \
     return 1; \
 } } while (0)
 typedef struct {
@@ -24,24 +22,6 @@ typedef struct {
     unsigned reads;
     int fault_reads;
 } Disk;
-static void *elf_allocate(void *unused, size_t bytes)
-{
-    (void)unused;
-    void *p=mmap(NULL,bytes,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
-    return p==MAP_FAILED?NULL:p;
-}
-static void elf_release(void *unused, void *ptr, size_t bytes)
-{
-    (void)unused;
-    (void)munmap(ptr,bytes);
-}
-static int elf_protect(void *unused, void *ptr, size_t bytes, uint32_t flags)
-{
-    (void)unused;
-    return mprotect(ptr,bytes,((flags&4u)?PROT_READ:0) |
-                              ((flags&2u)?PROT_WRITE:0) |
-                              ((flags&1u)?PROT_EXEC:0));
-}
 static int read_sectors(void *ctx, uint64_t pos, void *dst, uint32_t count)
 {
     Disk *disk=ctx;
@@ -67,22 +47,19 @@ static void host_free(void *ctx,void *ptr)
 int main(int argc,char **argv)
 {
     ENSURE(argc==3 || (argc==4 && strcmp(argv[3],"--reject-corrupt")==0));
-    FILE *binary=fopen(argv[1],"rb");
-    ENSURE(binary!=NULL);
+    void *image = dlopen(argv[1], RTLD_NOW | RTLD_LOCAL);
+    if (!image) fputs(dlerror(), stderr);
+    ENSURE(image);
+    void *symbol = dlsym(image, IFS_FS_COMMON_EXPORT_V2);
+    IfsFsModuleApiEntryV2 get_api;
+    ENSURE(symbol && sizeof(symbol) == sizeof(get_api));
+    memcpy(&get_api, &symbol, sizeof(get_api));
+    const IfsFsModuleApiV2 *api = get_api();
+    ENSURE(ifs_fs_api_v2_valid(api, "exfat") &&
+           (api->runtime_profiles & IFS_FS_PROFILE_FIRMWARE) &&
+           (api->runtime_profiles & IFS_FS_PROFILE_FREESTANDING));
+    const IfsFsCoreOpsV2 *core = (const void *)ifs_fs_group_v2(api, IFS_FS_GROUP_CORE);
     struct stat st;
-    ENSURE(fstat(fileno(binary),&st)==0 && S_ISREG(st.st_mode) &&
-           st.st_size>0 && st.st_size<=BOOT_SO_MAX_FILE);
-    size_t binary_bytes=(size_t)st.st_size;
-    void *payload=malloc(binary_bytes);
-    ENSURE(payload!=NULL && fread(payload,1,binary_bytes,binary)==binary_bytes);
-    ENSURE(fclose(binary)==0);
-    ENSURE(BootSoValidate(payload,binary_bytes)==0);
-    BootSoMemory memory={0,elf_allocate,elf_release,elf_protect};
-    BootSoImage image={0};
-    ENSURE(BootSoLoad(payload,binary_bytes,&memory,&image)==0);
-    free(payload);
-    ENSURE(strcmp(image.format_id,"exfat")==0 && image.core!=NULL);
-    const IfsFsCoreOpsV2 *core=image.core;
     const uint64_t required=IFS_FS_CORE_PROBE|IFS_FS_CORE_MOUNT|
        IFS_FS_CORE_STAT|IFS_FS_CORE_LIST|IFS_FS_CORE_READ;
     ENSURE(core->header.capabilities==required &&
@@ -90,7 +67,7 @@ int main(int argc,char **argv)
            core->stat && core->directory_entry && core->read &&
            !core->write && !core->create && !core->remove &&
            !core->rename && !core->truncate);
-    Disk disk={fopen(argv[2],"rb"),0,4096u,0};
+    Disk disk = {.file = fopen(argv[2], "rb"), .sector = 4096u};
     ENSURE(disk.file!=NULL);
     ENSURE(fstat(fileno(disk.file),&st)==0 && S_ISREG(st.st_mode) &&
            st.st_size>=8192);
@@ -117,8 +94,8 @@ int main(int argc,char **argv)
         ENSURE(core->mount(&host,&bad_volume,&bad_info)==IFS_FS_CORRUPT &&
                bad_volume==NULL);
         ENSURE(fclose(disk.file)==0);
-        BootSoUnload(&image);
-        puts("EXFAT-BOOT-COMMON-V2-CORRUPT-CHECKSUM-REFUSED");
+        ENSURE(dlclose(image) == 0);
+        puts("EXFAT-FREESTANDING-COMMON-V2-CORRUPT-CHECKSUM-REFUSED");
         return 0;
     }
     ENSURE(probed==IFS_FS_OK && variant==64);
@@ -164,7 +141,7 @@ int main(int argc,char **argv)
     ENSURE(io_status==IFS_FS_IO_ERROR);
     ENSURE(core->unmount(volume)==IFS_FS_OK);
     ENSURE(disk.reads>0 && fclose(disk.file)==0);
-    BootSoUnload(&image);
-    puts("EXFAT-BOOT-COMMON-V2-REAL-DIRECTORY-FILE-READ-PASS");
+    ENSURE(dlclose(image) == 0);
+    puts("EXFAT-FREESTANDING-COMMON-V2-REAL-DIRECTORY-FILE-READ-PASS");
     return 0;
 }
