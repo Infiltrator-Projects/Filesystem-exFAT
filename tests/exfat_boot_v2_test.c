@@ -85,9 +85,11 @@ int main(int argc,char **argv)
     const IfsFsCoreOpsV2 *core=image.core;
     const uint64_t required=IFS_FS_CORE_PROBE|IFS_FS_CORE_MOUNT|
        IFS_FS_CORE_STAT|IFS_FS_CORE_LIST|IFS_FS_CORE_READ;
-    ENSURE((core->header.capabilities&required)==required &&
+    ENSURE(core->header.capabilities==required &&
            core->probe && core->mount && core->unmount &&
-           core->stat && core->directory_entry && core->read);
+           core->stat && core->directory_entry && core->read &&
+           !core->write && !core->create && !core->remove &&
+           !core->rename && !core->truncate);
     Disk disk={fopen(argv[2],"rb"),0,4096u,0};
     ENSURE(disk.file!=NULL);
     ENSURE(fstat(fileno(disk.file),&st)==0 && S_ISREG(st.st_mode) &&

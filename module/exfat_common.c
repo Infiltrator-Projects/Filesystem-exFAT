@@ -216,6 +216,9 @@ static int read_file(void *v,const char *name,uint64_t at,void *out,uint32_t n){
     int r=path(name,p);if(r)return r;
     return ifs_exfat_engine_read64(p,at,out,n);
 }
+/* Firmware exposes a strictly read-only V2 namespace. Hosted builds retain
+ * their independently qualified native write/format functionality. */
+#if !defined(IFS_EXFAT_FIRMWARE_BUILD)
 static int write_file(void *v,const char *name,uint64_t at,const void *data,uint32_t n){
     char p[4096];if(!live(v)||(!data&&n))return IFS_FS_INVALID;
     if(!s.writable)return IFS_FS_ACCESS;
@@ -272,6 +275,7 @@ static int format(const IfsFsHostRuntimeV2 *h,uint32_t variant,
     return ifs_exfat_engine_format(&io,0u) ?
         IFS_FS_IO_ERROR:IFS_FS_OK;
 }
+#endif /* !IFS_EXFAT_FIRMWARE_BUILD */
 /* V2 volume operations share the same canonical source-owned FatFs state.
  * Return the mounted engine's authoritative allocation information.
  * This module knows its mounted cluster size and never reparses on-disk FAT. */
@@ -288,27 +292,40 @@ static int v2_query(void *v, IfsFsVolumeInfoV2 *info) {
     info->free_bytes=free_bytes;
     return IFS_FS_OK;
 }
+#if !defined(IFS_EXFAT_FIRMWARE_BUILD)
 static int v2_sync(void *v) {
     if(!live(v))return IFS_FS_INVALID;
     if(!s.host.flush)return IFS_FS_OK;
     return s.host.flush(s.host.context) ? IFS_FS_IO_ERROR : IFS_FS_OK;
 }
+#endif /* !IFS_EXFAT_FIRMWARE_BUILD */
 static const IfsFsVolumeOpsV2 group_volume={
     .header={IFS_FS_GROUP_ABI_V2,sizeof(IfsFsVolumeOpsV2),
              IFS_FS_GROUP_VOLUME,0u,
+#if defined(IFS_EXFAT_FIRMWARE_BUILD)
+             IFS_FS_VOLUME_QUERY},
+    .query=v2_query
+#else
              IFS_FS_VOLUME_QUERY|IFS_FS_VOLUME_SYNC|IFS_FS_VOLUME_FORMAT},
-    .query=v2_query,
-    .sync=v2_sync,
-    .format=format
+    .query=v2_query, .sync=v2_sync, .format=format
+#endif
 };
 /* Native CORE and VOLUME callbacks use the same mounted exFAT FatFs state. */
 static const IfsFsCoreOpsV2 group_core={
     .header={IFS_FS_GROUP_ABI_V2,sizeof(IfsFsCoreOpsV2),
-             IFS_FS_GROUP_CORE,0u,IFS_FS_CORE_ALL},
+             IFS_FS_GROUP_CORE,0u,
+#if defined(IFS_EXFAT_FIRMWARE_BUILD)
+             IFS_FS_CORE_PROBE|IFS_FS_CORE_MOUNT|IFS_FS_CORE_STAT|
+             IFS_FS_CORE_LIST|IFS_FS_CORE_READ},
+    .probe=probe, .mount=mount, .unmount=unmount,
+    .stat=stat_path, .directory_entry=nth, .read=read_file
+#else
+             IFS_FS_CORE_ALL},
     .probe=probe, .mount=mount, .unmount=unmount,
     .stat=stat_path, .directory_entry=nth,
     .read=read_file, .write=write_file, .create=create,
     .remove=remove_path, .rename=rename_path, .truncate=truncate_path
+#endif
 };
 static const IfsFsGroupHeaderV2 *query_v2(
     uint32_t id,uint32_t min,uint32_t max){
