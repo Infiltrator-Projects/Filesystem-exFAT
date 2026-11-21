@@ -166,6 +166,22 @@ int main(int argc,char **argv) {
        vol->sync(mounted)!=IFS_FS_OK ||
        core->unmount(mounted)!=IFS_FS_OK || !d.writes || !d.flushes)
         return fail("V2 truncate, flush or unmount");
+    /* Mount the SAME 512-byte-sector image over a strict 4 KiB host:
+     * the block layer refuses all unaligned reads, and no writes are
+     * permitted. This is an actual namespace read, not probe alone. */
+    Image strict_4k=d;
+    strict_4k.sector=4096u;
+    IfsFsHostRuntimeV2 boot_host=host_for(&strict_4k,0);
+    boot_host.logical_sector_bytes=4096u;
+    boot_host.physical_sector_bytes=4096u;
+    mounted=NULL;info.structure_bytes=sizeof(info);
+    if(core->probe(&boot_host,&variant)!=IFS_FS_OK || variant!=64u ||
+       core->mount(&boot_host,&mounted,&info)!=IFS_FS_OK || !mounted ||
+       core->read(mounted,"/TESTDIR/OUTPUT.BIN",0u,back,4096u)!=IFS_FS_OK ||
+       memcmp(back,data,4096u) ||
+       core->unmount(mounted)!=IFS_FS_OK ||
+       strict_4k.writes!=d.writes)
+        return fail("512-byte exFAT image over a 4 KiB read-only BOOT host");
     mounted=NULL; info.structure_bytes=sizeof(info);
     if(core->mount(&host,&mounted,&info)!=IFS_FS_OK ||
        core->read(mounted,"/TESTDIR/OUTPUT.BIN",0u,back,4096u)!=IFS_FS_OK ||

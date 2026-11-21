@@ -14,14 +14,20 @@ static int host_ok(const IfsFsHostRuntimeV2 *h) {
     return ifs_fs_host_v2_valid(h) && h->volume_bytes>=512u;
 }
 static int live(void *v){return s.mounted && s.handle && (uintptr_t)v==s.handle;}
+/* Native FatFs sectors may be smaller than a host's logical blocks.
+ * Every read, write and short transfer must obey Common V2 alignment,
+ * maximum transfer and exclusive read-modify-write guarantees. */
 static int raw_read(void *p,uint64_t at,void *b,uint32_t n) {
-    const IfsFsHostRuntimeV2 *h=p;return h->read_at(h->context,at,b,n);
+    const IfsFsHostRuntimeV2 *h=p;
+    return ifs_fs_host_read_bytes_v2(h,at,b,n)==IFS_FS_OK?0:-1;
 }
 static int raw_write(void *p,uint64_t at,const void *b,uint32_t n){
     const IfsFsHostRuntimeV2 *h=p;
-    if((h->capabilities&IFS_FS_HOST_READ_ONLY)||!(h->capabilities&IFS_FS_HOST_EXCLUSIVE)||
-       !h->write_at)return -1;
-    return h->write_at(h->context,at,b,n);
+    if((h->capabilities&IFS_FS_HOST_READ_ONLY)||
+       !(h->capabilities&IFS_FS_HOST_EXCLUSIVE)||
+       !(h->capabilities&IFS_FS_HOST_DURABLE)||
+       !h->write_at||!h->flush)return -1;
+    return ifs_fs_host_write_bytes_v2(h,at,b,n)==IFS_FS_OK?0:-1;
 }
 static int raw_flush(void *p){
     const IfsFsHostRuntimeV2 *h=p;
@@ -112,7 +118,9 @@ static int geometry(const IfsFsHostRuntimeV2 *h,uint32_t *sector,uint32_t *clust
        b[510]!=0x55u||b[511]!=0xAAu)
         return IFS_FS_CORRUPT;
     *sector=1u<<b[108];*cluster=*sector*(1u<<b[109]);
-    if (*sector != h->logical_sector_bytes) return IFS_FS_CORRUPT;
+    /* The disk BPB sector size is authoritative for FatFs. A 512-byte
+     * exFAT image can be hosted by a 4K BlockIo device when all requests
+     * are translated by the Common V2 byte-range bridge above. */
     status=boot_checksum(h,*sector);
     if(status!=IFS_FS_OK)return status;
     return exfat_layout(b,h,*sector);
