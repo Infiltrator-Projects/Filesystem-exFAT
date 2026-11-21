@@ -44,6 +44,16 @@ static void host_free(void *ctx,void *ptr)
     (void)ctx;
     free(ptr);
 }
+static int forbidden_write(void *ctx,uint64_t pos,const void *src,uint32_t bytes)
+{
+    (void)ctx;(void)pos;(void)src;(void)bytes;
+    return -1;
+}
+static int forbidden_flush(void *ctx)
+{
+    (void)ctx;
+    return -1;
+}
 int main(int argc,char **argv)
 {
     ENSURE(argc==3 || (argc==4 && strcmp(argv[3],"--reject-corrupt")==0));
@@ -84,6 +94,17 @@ int main(int argc,char **argv)
     host.allocate=host_alloc;
     host.release=host_free;
     ENSURE(ifs_fs_host_v2_valid(&host));
+    /* A writable host must be refused before the firmware reads media. */
+    IfsFsHostRuntimeV2 writable=host;
+    writable.capabilities=IFS_FS_HOST_EXCLUSIVE|IFS_FS_HOST_DURABLE;
+    writable.write_at=forbidden_write;
+    writable.flush=forbidden_flush;
+    ENSURE(ifs_fs_host_v2_valid(&writable));
+    IfsFsVolumeInfoV2 denied_info={.structure_bytes=sizeof(denied_info)};
+    void *denied=(void *)(uintptr_t)1u;
+    unsigned before=disk.reads;
+    ENSURE(core->mount(&writable,&denied,&denied_info)==IFS_FS_ACCESS &&
+           denied==NULL && disk.reads==before);
     uint32_t variant=0;
     const int probed=core->probe(&host,&variant);
     if(argc==4) {

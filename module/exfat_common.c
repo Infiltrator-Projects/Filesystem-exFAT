@@ -155,7 +155,13 @@ static int mount(const IfsFsHostRuntimeV2 *h,void **v,IfsFsVolumeInfoV2 *info){
     uint32_t sector,cluster;uint64_t total=0,free_bytes=0;int r;
     if(!host_ok(h)||!v||!info||info->structure_bytes<sizeof(*info))
         return IFS_FS_INVALID;
-    *v=NULL;if(s.mounted||s.generation==UINTPTR_MAX)return IFS_FS_BUSY;
+    *v=NULL;
+#if defined(IFS_EXFAT_FIRMWARE_BUILD)
+    /* Never negotiate writable media from a firmware read-only module. */
+    if (!(h->capabilities & IFS_FS_HOST_READ_ONLY))
+        return IFS_FS_ACCESS;
+#endif
+    if(s.mounted||s.generation==UINTPTR_MAX)return IFS_FS_BUSY;
     r=geometry(h,&sector,&cluster);if(r)return r;
     /* Keep only the caller-supplied V2 prefix; older hosts do not have the
      * optional entropy field. Clamp the saved size to our own storage. */
@@ -170,8 +176,12 @@ static int mount(const IfsFsHostRuntimeV2 *h,void **v,IfsFsVolumeInfoV2 *info){
     if(ifs_exfat_engine_space(&total,&free_bytes)) {
         (void)ifs_exfat_engine_unmount();return IFS_FS_IO_ERROR;
     }
+#if defined(IFS_EXFAT_FIRMWARE_BUILD)
+    s.writable=0;
+#else
     s.writable=!(h->capabilities&IFS_FS_HOST_READ_ONLY) &&
         (h->capabilities&IFS_FS_HOST_EXCLUSIVE) && h->write_at && h->flush;
+#endif
     s.mounted=1;s.cluster_bytes=cluster;s.handle=++s.generation;
     info->variant=64u;info->max_name_bytes=765u;info->block_bytes=cluster;
     info->total_bytes=total;info->free_bytes=free_bytes;*v=(void *)s.handle;
