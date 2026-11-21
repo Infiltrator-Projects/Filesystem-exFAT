@@ -138,7 +138,9 @@ static IfsFatfsIo native(const IfsFsHostRuntimeV2 *h,uint32_t sector){
 }
 static int probe(const IfsFsHostRuntimeV2 *h,uint32_t *variant){
     uint32_t sector,cluster;int r;
-    if(!host_ok(h)||!variant)return IFS_FS_INVALID;
+    if(!variant)return IFS_FS_INVALID;
+    *variant=0u;
+    if(!host_ok(h))return IFS_FS_INVALID;
     if(s.mounted)return IFS_FS_BUSY;
     r=geometry(h,&sector,&cluster);if(r)return r;
     IfsFatfsIo io=native(h,sector);

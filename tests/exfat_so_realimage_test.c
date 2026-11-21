@@ -99,14 +99,19 @@ int main(int argc,char **argv) {
     Image d;
     if(open_image(&d,argv[3]))return fail("cannot open foreign FAT32 fixture");
     IfsFsHostRuntimeV2 host=host_for(&d,0);
-    uint32_t variant=0u;
+    uint32_t variant=123u;
     if(!ifs_fs_host_v2_valid(&host) ||
-       core->probe(&host,&variant)!=IFS_FS_NOT_FOUND || d.writes)
+       core->probe(&host,&variant)!=IFS_FS_NOT_FOUND || variant!=0u || d.writes)
         return fail("wrong filesystem accepted or foreign data modified");
     if(close(d.fd))return fail("foreign media close failed");
 
     if(open_image(&d,argv[2]))return fail("cannot open external exFAT fixture");
     host=host_for(&d,1);
+    variant=123u;
+    d.fault_reads=1;
+    if(core->probe(&host,&variant)!=IFS_FS_IO_ERROR || variant!=0u)
+        return fail("V2 probe retained stale variant after device I/O failure");
+    d.fault_reads=0;
     if(!ifs_fs_host_v2_valid(&host) ||
        core->probe(&host,&variant)!=IFS_FS_OK || variant!=64u)
         return fail("exFAT probe rejected independent mkfs media");
