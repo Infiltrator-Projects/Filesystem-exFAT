@@ -142,6 +142,10 @@ int main(int argc,char **argv)
     }
     ENSURE(found);
     uint8_t data[8192]={0};
+    /* The same loaded freestanding reader must preserve distinct error
+     * classes for absent files and invalid reads, not report generic I/O. */
+    ENSURE(core->read(volume,"/MISSING.BIN",0,data,1u)==IFS_FS_NOT_FOUND);
+    ENSURE(core->read(volume,"/FOURK.BIN",8191u,data,2u)==IFS_FS_INVALID);
     ENSURE(core->read(volume,"/FOURK.BIN",0,data,sizeof(data))==IFS_FS_OK);
     for(unsigned i=0;i<sizeof(data);++i)
         ENSURE(data[i]==(uint8_t)(i*31u+7u));

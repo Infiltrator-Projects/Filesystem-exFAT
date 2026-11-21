@@ -195,8 +195,8 @@ static int stat_path(void *v,const char *name,IfsFsEntryV2 *out){
     if(!live(v)||!out)return IFS_FS_INVALID;
     int r=path(name,p);if(r)return r;
     if(p[2]=='/'&&!p[3])return entry(out,&e,1);
-    return ifs_exfat_engine_stat64(p,&e)?
-        IFS_FS_NOT_FOUND:entry(out,&e,0);
+    r=ifs_exfat_engine_stat64(p,&e);
+    return r==IFS_FS_OK ? entry(out,&e,0) : r;
 }
 static int nth(void *v,const char *name,uint32_t index,IfsFsEntryV2 *out){
     char p[4096];IfsFatfsEntry small={0};IfsExfatEntry64 e={0};
@@ -208,14 +208,13 @@ static int nth(void *v,const char *name,uint32_t index,IfsFsEntryV2 *out){
     if(!m||n+m+2u>=sizeof(p))return IFS_FS_INVALID;
     if(p[n-1]!='/')p[n++]='/';
     memcpy(p+n,small.name,m+1u);
-    if(ifs_exfat_engine_stat64(p,&e))return IFS_FS_IO_ERROR;
-    return entry(out,&e,0);
+    r=ifs_exfat_engine_stat64(p,&e);
+    return r==IFS_FS_OK ? entry(out,&e,0) : r;
 }
 static int read_file(void *v,const char *name,uint64_t at,void *out,uint32_t n){
     char p[4096];if(!live(v)||(!out&&n))return IFS_FS_INVALID;
     int r=path(name,p);if(r)return r;
-    return ifs_exfat_engine_read64(p,at,out,n)?
-        IFS_FS_IO_ERROR:IFS_FS_OK;
+    return ifs_exfat_engine_read64(p,at,out,n);
 }
 static int write_file(void *v,const char *name,uint64_t at,const void *data,uint32_t n){
     char p[4096];if(!live(v)||(!data&&n))return IFS_FS_INVALID;
