@@ -14,10 +14,11 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-typedef struct { int fd; uint64_t size; uint32_t sector; unsigned writes,flushes; int fault_reads; } Image;
+typedef struct { int fd; uint64_t size; uint32_t sector; unsigned writes,flushes,reads,fault_after_reads; int fault_reads; } Image;
 static int read_at(void *ctx,uint64_t at,void *p,uint32_t n) {
     Image *d=ctx;
-    if(d->fault_reads)return -1;
+    if(d->fault_reads || (d->fault_after_reads &&
+        ++d->reads>d->fault_after_reads))return -1;
     return p && d->sector && !(at % d->sector) && !(n % d->sector) &&
         at<=d->size && n<=d->size-at && at<=INT64_MAX &&
         pread(d->fd,p,n,(off_t)at)==(ssize_t)n ? 0 : -1;
@@ -112,6 +113,12 @@ int main(int argc,char **argv) {
     IfsFsVolumeInfoV2 info={0};
     info.structure_bytes=sizeof(info);
     void *mounted=NULL;
+    /* The geometry and checksum consume 13 reads before the native FatFs
+     * attach. Fail only that native read and preserve I/O_ERROR. */
+    d.reads=0u;d.fault_after_reads=13u;
+    if(core->mount(&host,&mounted,&info)!=IFS_FS_IO_ERROR || mounted)
+        return fail("V2 mount hid a native device read error as corruption");
+    d.fault_after_reads=0u;d.reads=0u;
     /* The prefix allocation has no room for newer optional host members. */
     volatile size_t short_bytes=IFS_FS_HOST_V2_BASE_BYTES;
     IfsFsHostRuntimeV2 *short_host=malloc(short_bytes);

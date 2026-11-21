@@ -4,6 +4,7 @@
 #include "exfat_api.h"
 #include <infiltratr/filesystem_module_v2.h>
 #include <string.h>
+static int native_read_failure;
 static struct {
     IfsFsHostRuntimeV2 host;
     uintptr_t generation, handle;
@@ -19,7 +20,12 @@ static int live(void *v){return s.mounted && s.handle && (uintptr_t)v==s.handle;
  * maximum transfer and exclusive read-modify-write guarantees. */
 static int raw_read(void *p,uint64_t at,void *b,uint32_t n) {
     const IfsFsHostRuntimeV2 *h=p;
-    return ifs_fs_host_read_bytes_v2(h,at,b,n)==IFS_FS_OK?0:-1;
+    const int result=ifs_fs_host_read_bytes_v2(h,at,b,n);
+    if(result!=IFS_FS_OK) {
+        if(native_read_failure==IFS_FS_OK)native_read_failure=result;
+        return -1;
+    }
+    return 0;
 }
 static int raw_write(void *p,uint64_t at,const void *b,uint32_t n){
     const IfsFsHostRuntimeV2 *h=p;
@@ -136,7 +142,10 @@ static int probe(const IfsFsHostRuntimeV2 *h,uint32_t *variant){
     if(s.mounted)return IFS_FS_BUSY;
     r=geometry(h,&sector,&cluster);if(r)return r;
     IfsFatfsIo io=native(h,sector);
-    r=ifs_exfat_engine_mount(&io);if(r)return IFS_FS_CORRUPT;
+    native_read_failure=IFS_FS_OK;
+    r=ifs_exfat_engine_mount(&io);
+    if(r)return native_read_failure!=IFS_FS_OK?
+        native_read_failure:IFS_FS_CORRUPT;
     r=ifs_exfat_engine_unmount();if(r)return IFS_FS_IO_ERROR;
     *variant=64u;return IFS_FS_OK;
 }
@@ -153,7 +162,9 @@ static int mount(const IfsFsHostRuntimeV2 *h,void **v,IfsFsVolumeInfoV2 *info){
     memcpy(&s.host,h,host_bytes);
     s.host.structure_bytes=(uint32_t)host_bytes;
     IfsFatfsIo io=native(&s.host,sector);
-    if(ifs_exfat_engine_mount(&io))return IFS_FS_CORRUPT;
+    native_read_failure=IFS_FS_OK;
+    if(ifs_exfat_engine_mount(&io))return native_read_failure!=IFS_FS_OK?
+        native_read_failure:IFS_FS_CORRUPT;
     if(ifs_exfat_engine_space(&total,&free_bytes)) {
         (void)ifs_exfat_engine_unmount();return IFS_FS_IO_ERROR;
     }
