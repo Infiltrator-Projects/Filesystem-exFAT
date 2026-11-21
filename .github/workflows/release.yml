@@ -104,6 +104,8 @@ jobs:
           ! find "$native/extracted" -name '*.ko' | grep .
           (cd "$RUNNER_TEMP/exfat-boot-fixture" && sha256sum -c before.sha256)
       - name: Qualify a real EFI-stub kernel and initramfs in OVMF
+        # BOOT is under development; standalone provider checks still run.
+        if: ${{ vars.IFS_BOOT_INTEGRATION_READY == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -147,7 +149,7 @@ jobs:
 
   publish-v2:
     needs: qualify
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: vars.IFS_BOOT_INTEGRATION_READY == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
