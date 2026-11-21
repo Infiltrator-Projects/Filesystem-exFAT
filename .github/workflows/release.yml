@@ -103,41 +103,6 @@ jobs:
           ! readelf -d "$module" | grep -E 'libcrypto\.so|libsqlite3\.so'
           ! find "$native/extracted" -name '*.ko' | grep .
           (cd "$RUNNER_TEMP/exfat-boot-fixture" && sha256sum -c before.sha256)
-      - name: Qualify a real EFI-stub kernel and initramfs in OVMF
-        # BOOT is under development; standalone provider checks still run.
-        if: ${{ vars.IFS_BOOT_INTEGRATION_READY == 'true' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            cpio busybox-static gdisk mtools qemu-system-x86 ovmf
-          cc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror \
-            -Iinclude tests/exfat_boot_media_writer.c -ldl -o build/exfat-boot-media-writer
-          stage="$RUNNER_TEMP/exfat-boot-vm"
-          mkdir -p "$stage"
-          source tests/require-rebuilt-boot.sh
-          "$IFS_BOOT_VALIDATOR" build/package-root/System/Filesystems/exFAT.so
-          native="$RUNNER_TEMP/exfat-native-v2"
-          "$IFS_BOOT_VALIDATOR" "$native/extracted/System/Filesystems/exFAT.so"
-          img=$(apt-cache depends linux-image-generic | awk '/Depends: linux-image-[0-9]/ { image=$2 } END { print image }')
-          test -n "$img"
-          kernelver=$(printf '%s' "$img" | sed 's/^linux-image-//')
-          (cd "$stage" && apt-get download "linux-image-unsigned-$kernelver")
-          dpkg-deb -x "$stage"/linux-image-unsigned-*.deb "$stage/kernel"
-          kernel="$stage/kernel/boot/vmlinuz-$kernelver"
-          test -s "$kernel"
-          bash tests/firmware-exfat.sh \
-            "$IFS_BOOT_EFI" \
-            "build/package-root/System/Filesystems/exFAT.so" \
-            "$kernel" "$PWD/build/exfat-boot-media-writer" "$stage/vm"
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: exfat-ovmf-serial
-          path: '**/serial.log'
-          if-no-files-found: warn
-          retention-days: 14
       - name: Hash the exact qualified package binaries
         run: (cd dist && sha256sum ./*.deb ./*.run > SHA256SUMS.txt)
       - uses: actions/upload-artifact@v4
@@ -149,7 +114,7 @@ jobs:
 
   publish-v2:
     needs: qualify
-    if: vars.IFS_BOOT_INTEGRATION_READY == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -159,7 +124,7 @@ jobs:
         with:
           name: exfat-v2-unreleased-${{ github.sha }}
           path: dist
-      - name: Publish BOOT-qualified Common V2 modules only
+      - name: Publish independently qualified Common V2 modules
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -190,5 +155,5 @@ jobs:
           fi
           gh release create "$tag" "$deb" "$run" dist/SHA256SUMS.txt \
             --target "$GITHUB_SHA" \
-            --title "exFAT Common V2 firmware reader $version" \
-            --notes "BOOT-qualified freestanding/hosted native exFAT V2 SO: both DEB and RUN, BOOT ELF loader, OVMF kernel/initramfs and corrupt-image rejection passed. No V1 runtime or kernel driver. Historical defragmenter code is retained for separately qualified V2 migration."
+            --title "exFAT Common V2 filesystem $version" \
+            --notes "Independently qualified Common V2 exFAT.so in portable DEB and CPU-native RUN. Hosted and freestanding source-owned reader checks include valid and corrupt exFAT media without mutation. No production BOOT/OVMF integration claim, V1 runtime or kernel driver. Historical defragmenter code is retained for separately qualified V2 migration."
