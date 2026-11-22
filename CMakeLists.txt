@@ -57,7 +57,10 @@ target_compile_definitions(exfat-unified PRIVATE
  _GNU_SOURCE _FILE_OFFSET_BITS=64 IFS_FATFS_ONLY=64)
 target_compile_options(exfat-unified PRIVATE
  -Wall -Wextra -Wpedantic -Werror -fvisibility=hidden)
-target_link_options(exfat-unified PRIVATE -Wl,-z,defs)
+target_link_options(exfat-unified PRIVATE -Wl,-z,defs
+  "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/module/v2-only.map")
+set_property(TARGET exfat-unified APPEND PROPERTY LINK_DEPENDS
+  "${CMAKE_CURRENT_SOURCE_DIR}/module/v2-only.map")
 target_link_libraries(exfat-unified PRIVATE InfiltratrCommon::Common)
 set_target_properties(exfat-unified PROPERTIES PREFIX "" OUTPUT_NAME "exFAT" SUFFIX ".so")
 add_dependencies(exfat-unified exfat-firmware-elf)
@@ -74,6 +77,9 @@ if(BUILD_TESTING)
   "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/compat" "${EXAPI}" "${FATFS}")
  target_link_libraries(exfat-unified-contract PRIVATE exfat-unified)
  add_test(NAME exfat-unified-module COMMAND exfat-unified-contract)
+ add_test(NAME exfat-v2-only-public-exports
+   COMMAND sh "${CMAKE_CURRENT_SOURCE_DIR}/tests/check_v2_exports.sh"
+     "$<TARGET_FILE:exfat-unified>")
 endif()
 # Generate the manual from the same editable source used by the DEB and RUN.
 set(EXFAT_GENERATED_MANUAL "${CMAKE_CURRENT_BINARY_DIR}/Filesystem-exFAT.pdf")
