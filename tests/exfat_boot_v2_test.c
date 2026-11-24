@@ -22,8 +22,17 @@ typedef struct {
     unsigned reads;
     int fault_reads;
 } Disk;
+static const IfsFsCoreOpsV2 *unmount_during_read;
+static void *active_volume;
+static int observed_unmount;
 static int read_sectors(void *ctx, uint64_t pos, void *dst, uint32_t count)
 {
+    if (unmount_during_read) {
+        const IfsFsCoreOpsV2 *ops=unmount_during_read;
+        unmount_during_read=NULL;
+        observed_unmount=ops->unmount(active_volume);
+        if (observed_unmount!=IFS_FS_BUSY) return -1;
+    }
     Disk *disk=ctx;
     if(!dst || !count || !disk->sector || pos%disk->sector ||
        count%disk->sector || pos>disk->bytes ||
@@ -148,7 +157,11 @@ int main(int argc,char **argv)
      * classes for absent files and invalid reads, not report generic I/O. */
     ENSURE(core->read(volume,"/MISSING.BIN",0,data,1u)==IFS_FS_NOT_FOUND);
     ENSURE(core->read(volume,"/FOURK.BIN",8191u,data,2u)==IFS_FS_INVALID);
+    active_volume=volume;
+    unmount_during_read=core;
+    observed_unmount=IFS_FS_INVALID;
     ENSURE(core->read(volume,"/FOURK.BIN",0,data,sizeof(data))==IFS_FS_OK);
+    ENSURE(!unmount_during_read && observed_unmount==IFS_FS_BUSY);
     for(unsigned i=0;i<sizeof(data);++i)
         ENSURE(data[i]==(uint8_t)(i*31u+7u));
     memset(data,0,sizeof(data));
