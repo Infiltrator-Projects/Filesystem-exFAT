@@ -28,8 +28,10 @@ int main(void)
         !core->rename || !core->truncate ||
         volume->header.abi_version!=IFS_FS_GROUP_ABI_V2 ||
         volume->header.capabilities!=
-            (IFS_FS_VOLUME_QUERY|IFS_FS_VOLUME_SYNC|IFS_FS_VOLUME_FORMAT) ||
+            (IFS_FS_VOLUME_QUERY|IFS_FS_VOLUME_SYNC|IFS_FS_VOLUME_FORMAT|
+             IFS_FS_VOLUME_LABEL_GET|IFS_FS_VOLUME_LABEL_SET) ||
         !volume->query || !volume->sync || !volume->format ||
+        !volume->label || !volume->set_label ||
         ifs_fs_group_v2(v2,IFS_FS_GROUP_HANDLES) ||
         ifs_fs_group_v2(v2,IFS_FS_GROUP_METADATA) ||
         ifs_fs_group_v2(v2,IFS_FS_GROUP_DEFRAG) ||
