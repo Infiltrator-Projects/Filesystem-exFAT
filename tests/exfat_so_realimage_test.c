@@ -93,7 +93,8 @@ int main(int argc,char **argv) {
         (const IfsFsVolumeOpsV2 *)ifs_fs_group_v2(api,IFS_FS_GROUP_VOLUME);
     if(!core || !vol || core->header.capabilities!=IFS_FS_CORE_ALL ||
        vol->header.capabilities!=
-         (IFS_FS_VOLUME_QUERY|IFS_FS_VOLUME_SYNC|IFS_FS_VOLUME_FORMAT))
+         (IFS_FS_VOLUME_QUERY|IFS_FS_VOLUME_SYNC|IFS_FS_VOLUME_FORMAT|
+          IFS_FS_VOLUME_LABEL_GET|IFS_FS_VOLUME_LABEL_SET) || !vol->label || !vol->set_label)
         return fail("native CORE or VOLUME capabilities incorrect");
 
     Image d;
