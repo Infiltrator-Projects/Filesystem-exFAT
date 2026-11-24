@@ -57,7 +57,39 @@ static int raw_flush(void *p){
     if((h->capabilities&IFS_FS_HOST_READ_ONLY)||!(h->capabilities&IFS_FS_HOST_EXCLUSIVE))return 0;
     return h->flush?h->flush(h->context):-1;
 }
-static uint32_t fat_time(void *p){(void)p;return (1u<<21)|(1u<<16);}
+/* The FatFs timestamp hook supplies the exFAT civil-time fields. Common V2 provides Unix
+ * epoch nanoseconds; encode UTC consistently in every runtime profile.
+ * Clamp to the shared FAT/exFAT representable years and floor to its two-second tick.
+ * Older hosts without a clock retain the documented 1980 fallback. */
+static uint32_t fat_time(void *context)
+{
+    const IfsFsHostRuntimeV2 *host=context;
+    const uint32_t epoch=(1u<<21)|(1u<<16);
+    if (!host || !(host->capabilities&IFS_FS_HOST_CLOCK) || !host->realtime_ns)
+        return epoch;
+    const uint64_t seconds=host->realtime_ns(host->context)/UINT64_C(1000000000);
+    if (seconds<UINT64_C(315532800)) return epoch;
+    if (seconds>=UINT64_C(4354819200))
+        return (127u<<25)|(12u<<21)|(31u<<16)|(23u<<11)|(59u<<5)|29u;
+    uint32_t days=(uint32_t)(seconds/86400u);
+    uint32_t year=1970u, month=1u, day_seconds=(uint32_t)(seconds%86400u);
+    for (;;) {
+        const uint32_t leap=(year%4u==0u && (year%100u!=0u || year%400u==0u));
+        const uint32_t length=365u+leap;
+        if (days<length) break;
+        days-=length; ++year;
+    }
+    static const uint8_t month_days[]={31,28,31,30,31,30,31,31,30,31,30,31};
+    for (;;) {
+        const uint32_t leap=(year%4u==0u && (year%100u!=0u || year%400u==0u));
+        const uint32_t length=month_days[month-1u]+(month==2u?leap:0u);
+        if (days<length) break;
+        days-=length; ++month;
+    }
+    return ((year-1980u)<<25)|(month<<21)|((days+1u)<<16)|
+           ((day_seconds/3600u)<<11)|(((day_seconds/60u)%60u)<<5)|
+           ((day_seconds%60u)/2u);
+}
 /* exFAT checksum of the 11 Main Boot Region sectors, per on-disk format.
  * VolumeFlags (106-107) and PercentInUse (112) are intentionally excluded
  * by the standard; everything else, including boot code, is authenticated

@@ -25,6 +25,42 @@ static int write_disk(void *p,uint64_t at,const void *src,uint32_t n) {
 static int flush_disk(void *p){return fsync(((Media *)p)->fd);}
 static void *alloc(void *p,size_t n){(void)p;return malloc(n);}
 static void dealloc(void *p,void *b){(void)p;free(b);}
+static uint64_t fixture_clock(void *ctx)
+{ (void)ctx; return UINT64_C(1709212456000000000); }
+static uint32_t le32(const unsigned char *p)
+{
+    return (uint32_t)p[0]|((uint32_t)p[1]<<8)|
+        ((uint32_t)p[2]<<16)|((uint32_t)p[3]<<24);
+}
+/* Read exFAT's root directory entry set directly, without using the
+ * provider's metadata parser to validate its own output. */
+static int check_clock_entry(Media *m)
+{
+    unsigned char boot[512],root[4096];
+    if(pread(m->fd,boot,sizeof boot,0)!=(ssize_t)sizeof boot ||
+       boot[108]<9u || boot[108]>12u || boot[109]>25u-boot[108]) return -1;
+    uint32_t sector=1u<<boot[108], cluster=le32(boot+96);
+    if(cluster<2u) return -1;
+    uint64_t at=((uint64_t)le32(boot+88)+
+        ((uint64_t)(cluster-2u)<<boot[109]))*sector;
+    if(at>m->bytes || sector>m->bytes-at ||
+       pread(m->fd,root,sector,(off_t)at)!=(ssize_t)sector) return -1;
+    for(uint32_t i=0;i+96u<=sector;i+=32u) {
+        if(!root[i]) break;
+        if(root[i]!=0x85u || root[i+32u]!=0xc0u || root[i+64u]!=0xc1u)
+            continue;
+        const unsigned char *name=root+i+66u;
+        const char expected[]="CLOCK.TXT";
+        unsigned k=0;
+        for(;k<sizeof(expected)-1u;++k)
+            if(name[2u*k]!=(unsigned char)expected[k] || name[2u*k+1u]) break;
+        if(k!=sizeof(expected)-1u || root[i+35u]!=k) continue;
+        const uint32_t stamp=((2024u-1980u)<<25)|(2u<<21)|(29u<<16)|
+                             (13u<<11)|(14u<<5)|8u;
+        return le32(root+i+12u)==stamp?0:-1;
+    }
+    return -1;
+}
 static int copy_and_verify(const IfsFsCoreOpsV2 *c,void *v,const char *name,const char *source){
   FILE *f=fopen(source,"rb");if(!f)return -1;
   struct stat s;if(fstat(fileno(f),&s)||!S_ISREG(s.st_mode)||s.st_size<=0||
@@ -59,7 +95,8 @@ int main(int argc,char **argv) {
   struct stat st;MUST(!fstat(m.fd,&st)&&S_ISREG(st.st_mode)&&st.st_size>=128*1024*1024);
   m.bytes=(uint64_t)st.st_size;
   IfsFsHostRuntimeV2 h={0};h.abi_version=IFS_FS_HOST_ABI_V2;h.structure_bytes=sizeof(h);
-  h.capabilities=IFS_FS_HOST_EXCLUSIVE|IFS_FS_HOST_DURABLE;h.volume_bytes=m.bytes;
+  h.capabilities=IFS_FS_HOST_EXCLUSIVE|IFS_FS_HOST_DURABLE|IFS_FS_HOST_CLOCK;h.volume_bytes=m.bytes;
+  h.monotonic_ns=fixture_clock;h.realtime_ns=fixture_clock;
   h.logical_sector_bytes=h.physical_sector_bytes=512;
   h.maximum_transfer_bytes=65536;h.context=&m;h.read_at=read_disk;h.write_at=write_disk;
   h.flush=flush_disk;h.allocate=alloc;h.release=dealloc;
@@ -67,6 +104,10 @@ int main(int argc,char **argv) {
   uint32_t variant=0;MUST(c->probe(&h,&variant)==IFS_FS_OK&&variant==64);
   IfsFsVolumeInfoV2 info={0};info.structure_bytes=sizeof(info);void *vol=NULL;
   MUST(c->mount(&h,&vol,&info)==IFS_FS_OK&&vol);
+  MUST(c->create(vol,"/CLOCK.TXT",IFS_FS_ENTRY_FILE)==IFS_FS_OK);
+  MUST(c->write(vol,"/CLOCK.TXT",0u,"x",1u)==IFS_FS_OK);
+  MUST(ops->sync(vol)==IFS_FS_OK && check_clock_entry(&m)==0);
+  MUST(c->remove(vol,"/CLOCK.TXT")==IFS_FS_OK);
   MUST(c->create(vol,"/System",IFS_FS_ENTRY_DIRECTORY)==IFS_FS_OK);
   MUST(c->create(vol,"/System/Kernel",IFS_FS_ENTRY_DIRECTORY)==IFS_FS_OK);
   MUST(c->create(vol,"/System/Kernel/Images",IFS_FS_ENTRY_DIRECTORY)==IFS_FS_OK);
