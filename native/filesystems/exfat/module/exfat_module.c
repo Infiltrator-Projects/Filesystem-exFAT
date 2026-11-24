@@ -136,3 +136,36 @@ int ifs_exfat_engine_space(uint64_t *total,uint64_t *free_bytes) {
 int ifs_exfat_engine_format(const IfsFatfsIo *io,uint32_t cluster_bytes) {
     return format_volume(io,cluster_bytes);
 }
+
+/* exFAT stores its volume label in a root-directory entry. The native
+ * UTF-16/UTF-8 converter and directory updater own the on-disk format. */
+int ifs_exfat_engine_label(char *out,uint32_t capacity,uint32_t *bytes)
+{
+    if (!selected || !out || !capacity || !bytes) return IFS_FS_INVALID;
+    *bytes=0u;
+    char label[64]={0};
+    FRESULT rc=f_getlabel("0:",label,NULL);
+    if(rc!=FR_OK)return exfat_common_failure(rc);
+    uint32_t n=0u;
+    while(n<sizeof(label) && label[n]) ++n;
+    if(n==sizeof(label))return IFS_FS_CORRUPT;
+    if(n>=capacity)return IFS_FS_NO_SPACE;
+    for(uint32_t i=0;i<=n;++i)out[i]=label[i];
+    *bytes=n;
+    return IFS_FS_OK;
+}
+#if !defined(IFS_EXFAT_FIRMWARE_BUILD)
+int ifs_exfat_engine_set_label(const char *label)
+{
+    if(!selected||!label)return IFS_FS_INVALID;
+    /* Reject control characters before FatFs can interpret one as a
+     * terminator. FatFs validates Unicode and the 11 UTF-16-unit limit. */
+    uint32_t n=0u;
+    while(n<=44u && label[n]){
+        unsigned char c=(unsigned char)label[n++];
+        if(c<32u || c==127u || c==':')return IFS_FS_INVALID;
+    }
+    if(n>44u)return IFS_FS_INVALID;
+    return exfat_common_failure(f_setlabel(label));
+}
+#endif

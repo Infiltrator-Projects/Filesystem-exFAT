@@ -466,15 +466,40 @@ static int guarded_v2_sync(void *v)
 }
 
 #endif /* !IFS_EXFAT_FIRMWARE_BUILD */
+static int v2_label(void *v,char *out,uint32_t capacity,uint32_t *bytes)
+{
+    if(!bytes)return IFS_FS_INVALID;
+    *bytes=0u;
+    if(!v2_enter_operation())return IFS_FS_BUSY;
+    if(!live(v))return v2_leave_operation(IFS_FS_INVALID);
+    native_read_failure=IFS_FS_OK;
+    int rc=ifs_exfat_engine_label(out,capacity,bytes);
+    if(rc!=IFS_FS_OK && native_read_failure!=IFS_FS_OK)rc=native_read_failure;
+    return v2_leave_operation(rc);
+}
+#if !defined(IFS_EXFAT_FIRMWARE_BUILD)
+static int v2_set_label(void *v,const char *label)
+{
+    if(!v2_enter_operation())return IFS_FS_BUSY;
+    if(!live(v)||!label)return v2_leave_operation(IFS_FS_INVALID);
+    if(!s.writable)return v2_leave_operation(IFS_FS_ACCESS);
+    native_read_failure=IFS_FS_OK;
+    int rc=ifs_exfat_engine_set_label(label);
+    if(rc!=IFS_FS_OK && native_read_failure!=IFS_FS_OK)rc=native_read_failure;
+    return v2_leave_operation(rc);
+}
+#endif
 static const IfsFsVolumeOpsV2 group_volume={
     .header={IFS_FS_GROUP_ABI_V2,sizeof(IfsFsVolumeOpsV2),
              IFS_FS_GROUP_VOLUME,0u,
 #if defined(IFS_EXFAT_FIRMWARE_BUILD)
-             IFS_FS_VOLUME_QUERY},
-    .query=guarded_v2_query
+             IFS_FS_VOLUME_QUERY|IFS_FS_VOLUME_LABEL_GET},
+    .query=guarded_v2_query,.label=v2_label
 #else
-             IFS_FS_VOLUME_QUERY|IFS_FS_VOLUME_SYNC|IFS_FS_VOLUME_FORMAT},
-    .query=guarded_v2_query, .sync=guarded_v2_sync, .format=guarded_format
+             IFS_FS_VOLUME_QUERY|IFS_FS_VOLUME_SYNC|IFS_FS_VOLUME_FORMAT|
+             IFS_FS_VOLUME_LABEL_GET|IFS_FS_VOLUME_LABEL_SET},
+    .query=guarded_v2_query, .sync=guarded_v2_sync, .format=guarded_format,
+    .label=v2_label,.set_label=v2_set_label
 #endif
 };
 /* Native CORE and VOLUME callbacks use the same mounted exFAT FatFs state. */

@@ -24,4 +24,8 @@ int ifs_exfat_engine_truncate64(const char *,uint64_t);
 int ifs_exfat_engine_stat64(const char *,IfsExfatEntry64 *);
 int ifs_exfat_engine_space(uint64_t *,uint64_t *);
 int ifs_exfat_engine_format(const IfsFatfsIo *,uint32_t);
+int ifs_exfat_engine_label(char *,uint32_t,uint32_t *);
+#if !defined(IFS_EXFAT_FIRMWARE_BUILD)
+int ifs_exfat_engine_set_label(const char *);
+#endif
 #endif

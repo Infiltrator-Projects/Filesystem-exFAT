@@ -104,6 +104,29 @@ int main(int argc,char **argv) {
   uint32_t variant=0;MUST(c->probe(&h,&variant)==IFS_FS_OK&&variant==64);
   IfsFsVolumeInfoV2 info={0};info.structure_bytes=sizeof(info);void *vol=NULL;
   MUST(c->mount(&h,&vol,&info)==IFS_FS_OK&&vol);
+  char original[64],label[64],tiny[2]={'X','X'};
+  uint32_t label_bytes=UINT32_MAX;
+  MUST(ops->label && ops->set_label);
+  MUST(ops->label(vol,original,sizeof(original),&label_bytes)==IFS_FS_OK);
+  MUST(ops->set_label(vol,"Café 2026")==IFS_FS_OK);
+  MUST(ops->label(vol,label,sizeof(label),&label_bytes)==IFS_FS_OK &&
+       !strcmp(label,"Café 2026") && label_bytes==strlen(label));
+  MUST(ops->label(vol,tiny,sizeof(tiny),&label_bytes)==IFS_FS_NO_SPACE &&
+       !label_bytes && tiny[0]=='X' && tiny[1]=='X');
+  unsigned writes=m.writes;
+  MUST(ops->set_label(vol,"bad:label")==IFS_FS_INVALID && m.writes==writes);
+  MUST(ops->set_label(vol,"0123456789AB")==IFS_FS_INVALID);
+  MUST(c->unmount(vol)==IFS_FS_OK);
+  IfsFsHostRuntimeV2 ro=h;
+  ro.capabilities=IFS_FS_HOST_READ_ONLY;
+  ro.write_at=NULL;ro.flush=NULL;
+  MUST(c->mount(&ro,&vol,&info)==IFS_FS_OK);
+  MUST(ops->label(vol,label,sizeof(label),&label_bytes)==IFS_FS_OK &&
+       !strcmp(label,"Café 2026"));
+  MUST(ops->set_label(vol,"DENIED")==IFS_FS_ACCESS);
+  MUST(c->unmount(vol)==IFS_FS_OK);
+  MUST(c->mount(&h,&vol,&info)==IFS_FS_OK);
+  MUST(ops->set_label(vol,original)==IFS_FS_OK);
   MUST(c->create(vol,"/CLOCK.TXT",IFS_FS_ENTRY_FILE)==IFS_FS_OK);
   MUST(c->write(vol,"/CLOCK.TXT",0u,"x",1u)==IFS_FS_OK);
   MUST(ops->sync(vol)==IFS_FS_OK && check_clock_entry(&m)==0);

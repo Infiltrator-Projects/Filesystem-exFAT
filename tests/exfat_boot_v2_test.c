@@ -134,6 +134,12 @@ int main(int argc,char **argv)
     void *volume=NULL;
     ENSURE(core->mount(&host,&volume,&volume_info)==IFS_FS_OK &&
            volume!=NULL && volume_info.variant==64);
+    const IfsFsVolumeOpsV2 *label_ops=(const void *)ifs_fs_group_v2(api,IFS_FS_GROUP_VOLUME);
+    char mounted_label[64];
+    uint32_t mounted_label_bytes=UINT32_MAX;
+    ENSURE(label_ops && label_ops->label && !label_ops->set_label);
+    ENSURE(label_ops->label(volume,mounted_label,sizeof(mounted_label),&mounted_label_bytes)==IFS_FS_OK &&
+           mounted_label_bytes==strlen(mounted_label));
     char name[768]={0};
     IfsFsEntryV2 entry={0};
     entry.structure_bytes=sizeof(entry);
