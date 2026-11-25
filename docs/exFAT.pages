@@ -334,3 +334,130 @@ BT /F1 10.2 Tf 0.07 0.16 0.23 rg 1 0 0 1 50 308 Tm (anch%3Amain\). A successful 
 BT /F1 10.2 Tf 0.07 0.16 0.23 rg 1 0 0 1 50 293 Tm (complete original-format parity, physical-media crash safety, or) Tj ET
 BT /F1 10.2 Tf 0.07 0.16 0.23 rg 1 0 0 1 50 278 Tm (production BOOT/kernel integration. Use disposable images for destructive) Tj ET
 BT /F1 10.2 Tf 0.07 0.16 0.23 rg 1 0 0 1 50 263 Tm (qualification.) Tj ET
+%%Page
+0.05 0.13 0.22 rg 0 749 595 93 re f
+0.01 0.52 0.56 rg 50 747 116 5 re f
+0.75 0.82 0.85 RG .7 w 50 49 m 545 49 l S
+BT /F2 9 Tf 0.62 0.88 0.91 rg 1 0 0 1 50 800 Tm (INFILTRATOR / ORIGINAL FORMAT SPECIFICATION SUPPLEMENT) Tj ET
+BT /F2 17 Tf 1 1 1 rg 1 0 0 1 50 770 Tm (exFAT / field-level historical and technical reference) Tj ET
+BT /F1 8 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 34 Tm (Filesystem-exFAT / original format, not a capability claim) Tj ET
+BT /F1 8 Tf 0.09 0.16 0.24 rg 1 0 0 1 504 34 Tm (PAGE 16) Tj ET
+BT /F2 12 Tf 0.03 0.54 0.59 rg 1 0 0 1 50 695 Tm (Origin, scope and non-compatible derivatives) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 660 Tm (Microsoft introduced exFAT with Windows Embedded CE 6.0 in November 2006; Vista SP1 and Windows) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 644 Tm (XP updates expanded deployment. SDXC uses exFAT for portable large media. Reverse-engineering) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 628 Tm (work appeared around 2010; Microsoft published the exFAT specification in August 2019. It is not a) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 612 Tm (FAT32 extension using the old BPB or directory entry. MBR type 0x07 is shared with NTFS/HPFS and is) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 596 Tm (not a unique identification; inspect the actual boot structure. The 64-bit file-length field is not permission to) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 580 Tm (exceed the volume, cluster heap or implementation limits. TexFAT is a distinct transactional extension;) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 564 Tm (baseline exFAT must not claim TexFAT semantics or ordinary FAT32+ support. FATX, Turbo FAT and) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 548 Tm (classic VFAT are not exFAT profiles.) Tj ET
+%%Page
+0.05 0.13 0.22 rg 0 749 595 93 re f
+0.01 0.52 0.56 rg 50 747 116 5 re f
+0.75 0.82 0.85 RG .7 w 50 49 m 545 49 l S
+BT /F2 9 Tf 0.62 0.88 0.91 rg 1 0 0 1 50 800 Tm (INFILTRATOR / ORIGINAL FORMAT SPECIFICATION SUPPLEMENT) Tj ET
+BT /F2 17 Tf 1 1 1 rg 1 0 0 1 50 770 Tm (exFAT / field-level historical and technical reference) Tj ET
+BT /F1 8 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 34 Tm (Filesystem-exFAT / original format, not a capability claim) Tj ET
+BT /F1 8 Tf 0.09 0.16 0.24 rg 1 0 0 1 504 34 Tm (PAGE 17) Tj ET
+BT /F2 12 Tf 0.03 0.54 0.59 rg 1 0 0 1 50 695 Tm (Boot sector and regions - exact byte offsets) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 660 Tm (All multibyte fields are little-endian. Offset:size: 0:3 JumpBoot \(EB 76 90\); 3:8 FileSystemName \(EXFAT) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 644 Tm (followed by three spaces\); 11:53 MustBeZero; 64:8 PartitionOffset; 72:8 VolumeLength; 80:4 FatOffset;) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 628 Tm (84:4 FatLength; 88:4 ClusterHeapOffset; 92:4 ClusterCount; 96:4 FirstClusterOfRootDirectory; 100:4) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 612 Tm (VolumeSerialNumber; 104:2 FileSystemRevision; 106:2 VolumeFlags; 108:1 BytesPerSectorShift; 109:1) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 596 Tm (SectorsPerClusterShift; 110:1 NumberOfFats; 111:1 DriveSelect; 112:1 PercentInUse; 113:7 reserved;) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 580 Tm (120:390 BootCode; 510:2 BootSignature \(55 AA\); remaining bytes if sector >512 are reserved. Main) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 564 Tm (region sectors 0..11, backup 12..23; each contains boot, eight extended boot sectors, OEM parameters,) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 548 Tm (reserved sector and checksum sector. Sector size 2^shift \(512..4096\); cluster size 2^\(both shifts\), at most) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 532 Tm (32 MiB. Check FAT and heap extents against declared volume and host bounds; cluster n maps to) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 516 Tm (heap_offset + \(n-2\)*sectors_per_cluster.) Tj ET
+%%Page
+0.05 0.13 0.22 rg 0 749 595 93 re f
+0.01 0.52 0.56 rg 50 747 116 5 re f
+0.75 0.82 0.85 RG .7 w 50 49 m 545 49 l S
+BT /F2 9 Tf 0.62 0.88 0.91 rg 1 0 0 1 50 800 Tm (INFILTRATOR / ORIGINAL FORMAT SPECIFICATION SUPPLEMENT) Tj ET
+BT /F2 17 Tf 1 1 1 rg 1 0 0 1 50 770 Tm (exFAT / field-level historical and technical reference) Tj ET
+BT /F1 8 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 34 Tm (Filesystem-exFAT / original format, not a capability claim) Tj ET
+BT /F1 8 Tf 0.09 0.16 0.24 rg 1 0 0 1 504 34 Tm (PAGE 18) Tj ET
+BT /F2 12 Tf 0.03 0.54 0.59 rg 1 0 0 1 50 695 Tm (Boot integrity and allocation) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 660 Tm (Boot checksum starts at zero; for every byte in first 11 sectors of its region rotate right 1 bit in 32 bits and) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 644 Tm (add byte modulo 2^32; skip bytes 106,107,112 of boot sector. The checksum sector contains repeated) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 628 Tm (LE32 checksum words. Validate each copy independently. Backup flags and PercentInUse are stale.) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 612 Tm (VolumeFlags bits 0 ActiveFat, 1 VolumeDirty, 2 MediaFailure, 3 ClearToZero; preserve reserved bits per) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 596 Tm (revision. Allocation bitmap bit n-2 \(LSB-first\) identifies cluster n. FAT[0]=0xFFFFFFF8,) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 580 Tm (FAT[1]=0xFFFFFFFF; normal successor 2..ClusterCount+1, bad=0xFFFFFFF7, EOC=0xFFFFFFFF.) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 564 Tm (NoFatChain streams use a contiguous range, FAT is required for root directory; bitmap is allocation) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 548 Tm (authority. Check both range and bitmap ownership. If two FATs exist, use the active FAT/bitmap pair;) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 532 Tm (inactive FAT is stale, not an automatic mirror. Maximum cluster count 2^32-11, subject to heap and) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 516 Tm (volume size. PercentInUse is a hint, 0xFF unknown.) Tj ET
+%%Page
+0.05 0.13 0.22 rg 0 749 595 93 re f
+0.01 0.52 0.56 rg 50 747 116 5 re f
+0.75 0.82 0.85 RG .7 w 50 49 m 545 49 l S
+BT /F2 9 Tf 0.62 0.88 0.91 rg 1 0 0 1 50 800 Tm (INFILTRATOR / ORIGINAL FORMAT SPECIFICATION SUPPLEMENT) Tj ET
+BT /F2 17 Tf 1 1 1 rg 1 0 0 1 50 770 Tm (exFAT / field-level historical and technical reference) Tj ET
+BT /F1 8 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 34 Tm (Filesystem-exFAT / original format, not a capability claim) Tj ET
+BT /F1 8 Tf 0.09 0.16 0.24 rg 1 0 0 1 504 34 Tm (PAGE 19) Tj ET
+BT /F2 12 Tf 0.03 0.54 0.59 rg 1 0 0 1 50 695 Tm (Directory-entry types and byte fields) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 660 Tm (Each record is 32 bytes. EntryType 0=end, 0x80 invalid, bit7 InUse, bit6 secondary, bit5 benign. Allocation) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 644 Tm (Bitmap 0x81: flags at 1, first cluster at 20 \(4\), length at 24 \(8\). Up-case Table 0x82: checksum at 4 \(4\),) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 628 Tm (cluster at 20, length at 24. Volume Label 0x83: length at 1, 11 UTF-16 units at 2. File 0x85: secondary) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 612 Tm (count at 1, set checksum at 2 \(2\), attributes at 4 \(2\), created/modified/accessed timestamps at 8/12/16 \(4) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 596 Tm (each\), create/modify 10ms at 20/21, UTC offsets at 22/23/24. Stream Extension 0xC0: flags at 1, name) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 580 Tm (length at 3, name hash at 4 \(2\), ValidDataLength at 8 \(8\), first cluster at 20 \(4\), DataLength at 24 \(8\). File) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 564 Tm (Name 0xC1: flags at 1, 15 UTF-16 units at 2. Validate set order, counts and exact checksum before use;) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 548 Tm (unknown critical primary types require refusal and unknown critical secondary types prevent interpreting) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 532 Tm (the affected set; preserve benign extension entries. No short-name alias and no VFAT 0x0F records.) Tj ET
+%%Page
+0.05 0.13 0.22 rg 0 749 595 93 re f
+0.01 0.52 0.56 rg 50 747 116 5 re f
+0.75 0.82 0.85 RG .7 w 50 49 m 545 49 l S
+BT /F2 9 Tf 0.62 0.88 0.91 rg 1 0 0 1 50 800 Tm (INFILTRATOR / ORIGINAL FORMAT SPECIFICATION SUPPLEMENT) Tj ET
+BT /F2 17 Tf 1 1 1 rg 1 0 0 1 50 770 Tm (exFAT / field-level historical and technical reference) Tj ET
+BT /F1 8 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 34 Tm (Filesystem-exFAT / original format, not a capability claim) Tj ET
+BT /F1 8 Tf 0.09 0.16 0.24 rg 1 0 0 1 504 34 Tm (PAGE 20) Tj ET
+BT /F2 12 Tf 0.03 0.54 0.59 rg 1 0 0 1 50 695 Tm (Name, time, length and checksum algorithms) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 660 Tm (Set checksum: rotate a 16-bit accumulator right one and add each byte of all records, omitting bytes 2 and) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 644 Tm (3 in the primary record. Name hash uses the same 16-bit rotate/add on little-endian bytes of the name) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 628 Tm (after mapping UTF-16 code units through the volume up-case table; hash alone does not prove equality.) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 612 Tm (Up-case checksum uses 32-bit rotate/add over its stored bytes. Validate compressed table runs, exact) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 596 Tm (length and mapping; preserve case in filenames and compare via the table. Filename length is 1..255) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 580 Tm (UTF-16 code units, with ceil\(length/15\) name entries. FAT-style 32-bit timestamps encode seconds/2,) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 564 Tm (minute, hour, day, month, year since 1980; create/modify 10ms increments 0..199. UTC offset is signed) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 548 Tm (seven-bit 15-minute units with validity bit 7. ValidDataLength <= DataLength; return zeroes from valid end) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 532 Tm (to logical end, never stale data. Empty stream has zero first cluster. NoFatChain flag bit1;) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 516 Tm (AllocationPossible bit0. Check ceil\(DataLength/cluster_bytes\) before contiguous range arithmetic or chain) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 500 Tm (walk.) Tj ET
+%%Page
+0.05 0.13 0.22 rg 0 749 595 93 re f
+0.01 0.52 0.56 rg 50 747 116 5 re f
+0.75 0.82 0.85 RG .7 w 50 49 m 545 49 l S
+BT /F2 9 Tf 0.62 0.88 0.91 rg 1 0 0 1 50 800 Tm (INFILTRATOR / ORIGINAL FORMAT SPECIFICATION SUPPLEMENT) Tj ET
+BT /F2 17 Tf 1 1 1 rg 1 0 0 1 50 770 Tm (exFAT / field-level historical and technical reference) Tj ET
+BT /F1 8 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 34 Tm (Filesystem-exFAT / original format, not a capability claim) Tj ET
+BT /F1 8 Tf 0.09 0.16 0.24 rg 1 0 0 1 504 34 Tm (PAGE 21) Tj ET
+BT /F2 12 Tf 0.03 0.54 0.59 rg 1 0 0 1 50 695 Tm (Mutation, recovery and external compatibility) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 660 Tm (Use the specification's update ordering and flush requirements; for allocation, set dirty, update FAT if) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 644 Tm (needed, update bitmap, publish directory set and clear dirty only when consistent; freeing must avoid) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 628 Tm (dangling references. A complete data write also requires data before publishing the valid-data boundary.) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 612 Tm (Compare exact bytes, allocation bitmap ownership, entry checksums and name hash after write. A dirty or) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 596 Tm (media-failure flag is not a journal; unknown transaction state requires fail-closed policy. Test) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 580 Tm (512/1024/2048/4096-byte sector geometry, malformed boot checksums, truncated sets, mismatched) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 564 Tm (up-case checksums, contiguous-to-fragmented conversion, cross-links, zero-length streams, VDL tail) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 548 Tm (zeroing, missing bitmap and active FAT selection. Ordinary exFAT has no native VFAT names, FSInfo,) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 532 Tm (OS/2 EA convention, classic FAT+ encoding or general ACL/journal; optional extensions need) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 516 Tm (independent specification and tests.) Tj ET
+%%Page
+0.05 0.13 0.22 rg 0 749 595 93 re f
+0.01 0.52 0.56 rg 50 747 116 5 re f
+0.75 0.82 0.85 RG .7 w 50 49 m 545 49 l S
+BT /F2 9 Tf 0.62 0.88 0.91 rg 1 0 0 1 50 800 Tm (INFILTRATOR / ORIGINAL FORMAT SPECIFICATION SUPPLEMENT) Tj ET
+BT /F2 17 Tf 1 1 1 rg 1 0 0 1 50 770 Tm (exFAT / field-level historical and technical reference) Tj ET
+BT /F1 8 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 34 Tm (Filesystem-exFAT / original format, not a capability claim) Tj ET
+BT /F1 8 Tf 0.09 0.16 0.24 rg 1 0 0 1 504 34 Tm (PAGE 22) Tj ET
+BT /F2 12 Tf 0.03 0.54 0.59 rg 1 0 0 1 50 695 Tm (Primary source and implementation boundary) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 660 Tm (Microsoft exFAT File System Specification, revision 1.00,) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 644 Tm (https://learn.microsoft.com/en-us/windows/win32/fileio/exfat-specification ; user-supplied historical File) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 628 Tm (Allocation Table reference \(Wikipedia, CC BY-SA\), https://en.wikipedia.org/wiki/File_Allocation_Table .) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 612 Tm (Field-level rules here are a compact reference to the specification, not its replacement. Provider support is) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 596 Tm (established only by exact Common V2 source, executable tests and packaged binary. No new operation,) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 580 Tm (build, installer or release is claimed by these documentation changes.) Tj ET

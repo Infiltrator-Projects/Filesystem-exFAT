@@ -30,6 +30,7 @@ The target installation is `/System/Filesystems/exFAT.so` and `/System/Resources
 - [Native design or source provenance](native/filesystems/exfat/DESIGN.md)
 - [Migration and source history](docs/RELEASE_SCOPE.md)
 - [Original-format reference source](docs/exFAT.pages) and [PDF](docs/exFAT.pdf)
+- [Field-level original-format specification supplement](docs/FORMAT_SPECIFICATION.md)
 - [Project philosophy](docs/PHILOSOPHY.md)
 - [Common ABI](https://github.com/Infiltrator-Projects/Libraries)
 
