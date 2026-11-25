@@ -469,6 +469,21 @@ int main(int argc,char **argv) {
         mounted=NULL;info.structure_bytes=sizeof(info);
         if(core->mount(&host,&mounted,&info)!=IFS_FS_OK)
             return fail("cold relocation remount");
+        const IfsFsAllocationOpsV2 *allocation=(const void*)ifs_fs_group_v2(api,IFS_FS_GROUP_ALLOCATION);
+        if(!allocation || !allocation->map)return fail("missing native allocation map");
+        uint64_t cursor=0u,unknown=0u,free_bytes=0u;
+        for(unsigned page=0u;;++page){
+            IfsFsAllocationRangeV2 ranges[8];uint32_t count=0u;uint64_t next=0u;
+            if(page>=65536u)return fail("allocation paging did not terminate");
+            int status=allocation->map(mounted,cursor,ranges,8u,&count);
+            if(!ifs_fs_allocation_page_v2_valid(host.volume_bytes,cursor,status,ranges,8u,count,&next,&unknown))
+                return fail("malformed native allocation map");
+            for(uint32_t k=0u;k<count;++k)if(ranges[k].state==IFS_FS_SPACE_FREE)free_bytes+=ranges[k].length;
+            cursor=next;
+            if(status==IFS_FS_END)break;
+        }
+        if(cursor!=host.volume_bytes || unknown || free_bytes!=info.free_bytes)
+            return fail("native allocation map does not reconcile with volume accounting");
         for(unsigned i=0u;i<2u;++i){
             IfsFsExtentV2 e={0};uint32_t n=0u;
             if(map->map(mounted,names[i],0u,&e,1u,&n)!=IFS_FS_OK ||
