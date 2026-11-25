@@ -175,6 +175,8 @@ int main(int argc,char **argv) {
     d.fault_reads=0;
     if(fault_result!=IFS_FS_IO_ERROR)
         return fail("V2 read failed to preserve an injected device I/O error");
+    if(core->read(mounted,"/TESTDIR/ABSENT.BIN",0u,back,1u)!=IFS_FS_NOT_FOUND)
+        return fail("V2 stale device fault contaminated a subsequent missing file");
     if(core->truncate(mounted,"/TESTDIR/OUTPUT.BIN",4096u)!=IFS_FS_OK ||
        vol->sync(mounted)!=IFS_FS_OK ||
        core->unmount(mounted)!=IFS_FS_OK || !d.writes || !d.flushes)

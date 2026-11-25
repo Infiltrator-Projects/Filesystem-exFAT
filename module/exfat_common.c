@@ -295,7 +295,9 @@ static int stat_path(void *v,const char *name,IfsFsEntryV2 *out){
     if(!live(v)||!out)return IFS_FS_INVALID;
     int r=path(name,p);if(r)return r;
     if(p[2]=='/'&&!p[3])return entry(out,&e,1);
+    native_read_failure=IFS_FS_OK;
     r=ifs_exfat_engine_stat64(p,&e);
+    if(r!=IFS_FS_OK && native_read_failure!=IFS_FS_OK)return native_read_failure;
     return r==IFS_FS_OK ? entry(out,&e,0) : r;
 }
 static int guarded_stat_path(void *v,const char *name,IfsFsEntryV2 *out)
@@ -308,13 +310,17 @@ static int nth(void *v,const char *name,uint32_t index,IfsFsEntryV2 *out){
     char p[4096];IfsFatfsEntry small={0};IfsExfatEntry64 e={0};
     if(!live(v)||!out)return IFS_FS_INVALID;
     int r=path(name,p);if(r)return r;
+    native_read_failure=IFS_FS_OK;
     r=ifs_exfat_engine_directory_entry(p,index,&small);
+    if(native_read_failure!=IFS_FS_OK)return native_read_failure;
     if(r)return r==1?IFS_FS_END:IFS_FS_IO_ERROR;
     size_t n=strlen(p),m=strlen(small.name);
     if(!m||n+m+2u>=sizeof(p))return IFS_FS_INVALID;
     if(p[n-1]!='/')p[n++]='/';
     memcpy(p+n,small.name,m+1u);
+    native_read_failure=IFS_FS_OK;
     r=ifs_exfat_engine_stat64(p,&e);
+    if(r!=IFS_FS_OK && native_read_failure!=IFS_FS_OK)return native_read_failure;
     return r==IFS_FS_OK ? entry(out,&e,0) : r;
 }
 static int guarded_nth(void *v,const char *name,uint32_t index,IfsFsEntryV2 *out)
@@ -326,7 +332,9 @@ static int guarded_nth(void *v,const char *name,uint32_t index,IfsFsEntryV2 *out
 static int read_file(void *v,const char *name,uint64_t at,void *out,uint32_t n){
     char p[4096];if(!live(v)||(!out&&n))return IFS_FS_INVALID;
     int r=path(name,p);if(r)return r;
-    return ifs_exfat_engine_read64(p,at,out,n);
+    native_read_failure=IFS_FS_OK;
+    r=ifs_exfat_engine_read64(p,at,out,n);
+    return r!=IFS_FS_OK && native_read_failure!=IFS_FS_OK?native_read_failure:r;
 }
 static int guarded_read_file(void *v,const char *name,uint64_t at,void *out,uint32_t n)
 {
