@@ -98,7 +98,7 @@ int main(int argc,char **argv) {
        !core || !vol || core->header.capabilities!=IFS_FS_CORE_ALL ||
        vol->header.capabilities!=
          (IFS_FS_VOLUME_QUERY|IFS_FS_VOLUME_SYNC|IFS_FS_VOLUME_FORMAT|
-          IFS_FS_VOLUME_LABEL_GET|IFS_FS_VOLUME_LABEL_SET) || !vol->label || !vol->set_label)
+          IFS_FS_VOLUME_LABEL_GET|IFS_FS_VOLUME_LABEL_SET|IFS_FS_VOLUME_CHECK) || !vol->label || !vol->set_label || !vol->check || vol->repair)
         return fail("native CORE or VOLUME capabilities incorrect");
 
     Image d;
@@ -206,6 +206,13 @@ int main(int argc,char **argv) {
         }
         if(d.writes!=writes)return fail("exFAT read-only extent mapping wrote media");
     }
+    /* Native ownership check covers the actual external mkfs image,
+     * nested directories and system streams without writing media. */
+    uint64_t errors=UINT64_MAX;
+    unsigned writes_before_check=d.writes;
+    if(vol->check(mounted,0u,&errors)!=IFS_FS_OK || errors ||
+       d.writes!=writes_before_check)
+        return fail("clean native exFAT ownership check");
     /* Inject an actual host I/O failure after a successful mount. Missing
      * files and hardware errors must not be reported interchangeably. */
     d.fault_reads=1;

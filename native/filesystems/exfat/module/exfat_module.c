@@ -250,6 +250,198 @@ int ifs_exfat_engine_map(const char *path,uint64_t first,IfsFsExtentV2 *out,
     }
     return result;
 }
+/* Ownership reconciliation for the native exFAT allocation domain.
+ * Every file/directory stream is opened by FatFs, which validates its
+ * entry-set checksum and interprets NoFatChain. Independently claim the
+ * two system streams in the root (bitmap and upcase). A final bitmap
+ * scan catches unowned allocations and references to free clusters.
+ * This is a read-only check, not a destructive repair. */
+typedef struct {
+    const IfsFsHostRuntimeV2 *host;
+    uint8_t *owners;
+    uint64_t unit;
+    unsigned bitmap_seen,upcase_seen;
+} ExfatCheck;
+
+static int exfat_check_cancel(ExfatCheck *c)
+{return c->host->cancelled && c->host->cancelled(c->host->context);}
+
+static int exfat_check_claim(ExfatCheck *c,FFOBJID *obj,int root)
+{
+    const uint64_t size=(uint64_t)obj->objsize;
+    const uint64_t wanted=size/c->unit+(size%c->unit!=0u);
+    DWORD cluster=root?(DWORD)volume.dirbase:obj->sclust;
+    if(!root && !wanted)return cluster?IFS_FS_CORRUPT:IFS_FS_OK;
+    if(!root && wanted>volume.n_fatent-2u)return IFS_FS_CORRUPT;
+    if(root){obj->stat=0u;obj->sclust=0u;}
+    for(uint64_t i=0u;i<volume.n_fatent-2u;++i) {
+        if(exfat_check_cancel(c))return IFS_FS_BUSY;
+        if(cluster<2u || cluster>=volume.n_fatent || cluster>=0x7ffffff0u ||
+           (!root && i>=wanted))return IFS_FS_CORRUPT;
+        const uint8_t mask=(uint8_t)(1u<<(cluster%8u));
+        if(c->owners[cluster/8u]&mask)return IFS_FS_CORRUPT;
+        c->owners[cluster/8u]|=mask;
+        DWORD next=ifs_exfat_native_next_cluster(obj,cluster);
+        if(next==UINT32_MAX)return IFS_FS_IO_ERROR;
+        if(next>=0x7ffffff8u && next<=0x7fffffffu)
+            return root || i+1u==wanted?IFS_FS_OK:IFS_FS_CORRUPT;
+        if(next<2u || next>=volume.n_fatent || next>=0x7ffffff0u)
+            return IFS_FS_CORRUPT;
+        cluster=next;
+    }
+    return IFS_FS_CORRUPT;
+}
+
+/* System streams have no file-directory entry sets. Their first-cluster
+ * and length fields are defined directly in the 0x81/0x82 records.
+ * FatFs's mount already requires a contiguous allocation bitmap. */
+static int exfat_check_system(ExfatCheck *c)
+{
+    FFOBJID root={0};root.fs=&volume;
+    DWORD cluster=(DWORD)volume.dirbase;
+    uint8_t sector[4096];
+    for(uint32_t step=0u;step<volume.n_fatent-2u;++step) {
+        if(exfat_check_cancel(c))return IFS_FS_BUSY;
+        if(cluster<2u || cluster>=volume.n_fatent || cluster>=0x7ffffff0u)
+            return IFS_FS_CORRUPT;
+        const uint64_t base=(uint64_t)volume.database+
+            (uint64_t)(cluster-2u)*volume.csize;
+        for(uint32_t n=0u;n<volume.csize;++n) {
+            if(disk_read(0,sector,(LBA_t)(base+n),1u)!=RES_OK)
+                return IFS_FS_IO_ERROR;
+            for(uint32_t at=0u;at<device.sector_bytes;at+=32u) {
+                const uint8_t *e=sector+at;
+                if(!e[0])goto complete;
+                if(!(e[0]&0x80u))continue;
+                if(e[0]==0x81u || e[0]==0x82u) {
+                    FFOBJID obj={0};obj.fs=&volume;
+                    obj.sclust=exfat_le32(e+20);
+                    obj.objsize=exfat_le64(e+24);
+                    if(!obj.objsize || obj.sclust<2u ||
+                       obj.sclust>=volume.n_fatent)return IFS_FS_CORRUPT;
+                    if(e[0]==0x81u) {
+                        const uint64_t expected=((uint64_t)volume.n_fatent-2u+7u)/8u;
+                        if(++c->bitmap_seen!=1u || e[1] ||
+                           obj.objsize!=expected ||
+                           (uint64_t)volume.database+
+                            (uint64_t)(obj.sclust-2u)*volume.csize!=volume.bitbase)
+                            return IFS_FS_CORRUPT;
+                    }else if(++c->upcase_seen!=1u || obj.objsize>131072u ||
+                             (obj.objsize&1u))return IFS_FS_CORRUPT;
+                    int rc=exfat_check_claim(c,&obj,0);
+                    if(rc!=IFS_FS_OK)return rc;
+                }else if(e[0]!=0x83u && e[0]!=0x85u && e[0]!=0xc0u &&
+                         e[0]!=0xc1u && e[0]!=0xa0u) {
+                    /* Do not certify an unknown allocation-bearing extension. */
+                    return IFS_FS_UNSUPPORTED;
+                }
+            }
+        }
+        DWORD next=ifs_exfat_native_next_cluster(&root,cluster);
+        if(next==UINT32_MAX)return IFS_FS_IO_ERROR;
+        if(next>=0x7ffffff8u && next<=0x7fffffffu)goto complete;
+        cluster=next;
+    }
+    return IFS_FS_CORRUPT;
+complete:
+    return c->bitmap_seen==1u && c->upcase_seen==1u?IFS_FS_OK:IFS_FS_CORRUPT;
+}
+
+static int exfat_check_tree(ExfatCheck *c,char path[4096],size_t length,unsigned depth)
+{
+    if(depth>64u)return IFS_FS_UNSUPPORTED;
+    DIR dir={0};
+    FRESULT native_rc=f_opendir(&dir,path);
+    if(native_rc!=FR_OK)return exfat_common_failure(native_rc);
+    int rc=exfat_check_claim(c,&dir.obj,depth==0u);
+    if(rc!=IFS_FS_OK)goto done;
+    if(!depth) {
+        rc=exfat_check_system(c);
+        if(rc!=IFS_FS_OK)goto done;
+    }
+    for(;;) {
+        if(exfat_check_cancel(c)){rc=IFS_FS_BUSY;goto done;}
+        FILINFO entry;
+        native_rc=f_readdir(&dir,&entry);
+        if(native_rc!=FR_OK){rc=exfat_common_failure(native_rc);goto done;}
+        if(!entry.fname[0])break;
+        const size_t size=strlen(entry.fname);
+        if(!size || size>=sizeof(entry.fname) ||
+           length+1u+size>=4096u || strchr(entry.fname,'/') ||
+           strchr(entry.fname,'\\')){rc=IFS_FS_CORRUPT;goto done;}
+        size_t start=length;
+        if(path[start-1u]!='/')path[start++]='/';
+        memcpy(path+start,entry.fname,size+1u);
+        if(entry.fattrib&AM_DIR)rc=exfat_check_tree(c,path,start+size,depth+1u);
+        else {
+            FIL file={0};
+            native_rc=f_open(&file,path,FA_READ);
+            if(native_rc!=FR_OK)rc=exfat_common_failure(native_rc);
+            else {
+                rc=exfat_check_claim(c,&file.obj,0);
+                native_rc=f_close(&file);
+                if(rc==IFS_FS_OK && native_rc!=FR_OK)rc=exfat_common_failure(native_rc);
+            }
+        }
+        path[length]='\0';
+        if(rc!=IFS_FS_OK)goto done;
+    }
+done:
+    native_rc=f_closedir(&dir);
+    if(rc==IFS_FS_OK && native_rc!=FR_OK)rc=exfat_common_failure(native_rc);
+    return rc;
+}
+
+int ifs_exfat_engine_check(const IfsFsHostRuntimeV2 *host,uint64_t *errors)
+{
+    if(!errors || !host || !selected)return IFS_FS_INVALID;
+    *errors=0u;
+    if(volume.fs_type!=FS_EXFAT || volume.n_fatent<3u ||
+       !volume.csize || !device.sector_bytes ||
+       device.sector_bytes>4096u || volume.wflag)return IFS_FS_CORRUPT;
+    ExfatCheck c={.host=host,.unit=(uint64_t)volume.csize*device.sector_bytes};
+    const size_t size=(size_t)(((uint64_t)volume.n_fatent+7u)/8u);
+    c.owners=host->allocate(host->context,size);
+    if(!c.owners)return IFS_FS_NO_MEMORY;
+    memset(c.owners,0,size);
+    char path[4096]="0:/";
+    int rc=exfat_check_tree(&c,path,3u,0u);
+    if(rc==IFS_FS_CORRUPT || rc==IFS_FS_NOT_FOUND) {
+        *errors=1u;rc=IFS_FS_OK;goto done;
+    }
+    if(rc!=IFS_FS_OK)goto done;
+    /* Allocation bits, not unused FAT entries, are the authority for
+     * contiguous streams. A bad-cluster marker is the sole non-owner
+     * allocation admitted by this supported native layout. */
+    FFOBJID table={0};table.fs=&volume;
+    uint8_t bitmap[4096];
+    uint64_t cached=UINT64_MAX;
+    for(uint32_t cluster=2u;cluster<volume.n_fatent;++cluster) {
+        if(exfat_check_cancel(&c)){rc=IFS_FS_BUSY;goto done;}
+        const uint64_t bit=cluster-2u;
+        const uint64_t sector=(uint64_t)volume.bitbase+bit/8u/device.sector_bytes;
+        if(sector!=cached) {
+            if(disk_read(0,bitmap,(LBA_t)sector,1u)!=RES_OK){
+                rc=IFS_FS_IO_ERROR;goto done;
+            }
+            cached=sector;
+        }
+        const int allocated=(bitmap[(bit/8u)%device.sector_bytes]&(1u<<(bit%8u)))!=0u;
+        const int claimed=(c.owners[cluster/8u]&(1u<<(cluster%8u)))!=0u;
+        if(allocated==claimed)continue;
+        if(allocated) {
+            DWORD next=ifs_exfat_native_next_cluster(&table,cluster);
+            if(next==UINT32_MAX){rc=IFS_FS_IO_ERROR;goto done;}
+            if(next==0x7ffffff7u)continue;
+        }
+        ++*errors;
+    }
+done:
+    host->release(host->context,c.owners);
+    if(rc!=IFS_FS_OK)*errors=0u;
+    return rc;
+}
+
 int ifs_exfat_engine_set_label(const char *label)
 {
     if(!selected||!label)return IFS_FS_INVALID;

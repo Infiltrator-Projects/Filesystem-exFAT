@@ -28,6 +28,7 @@ int ifs_exfat_engine_format(const IfsFatfsIo *,uint32_t);
 int ifs_exfat_engine_label(char *,uint32_t,uint32_t *);
 #if !defined(IFS_EXFAT_FIRMWARE_BUILD)
 int ifs_exfat_engine_set_label(const char *);
+int ifs_exfat_engine_check(const IfsFsHostRuntimeV2 *,uint64_t *);
 int ifs_exfat_engine_map(const char *,uint64_t,IfsFsExtentV2 *,uint32_t,uint32_t *);
 #endif
 #endif

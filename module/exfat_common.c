@@ -516,6 +516,17 @@ static int v2_map_file(void *v,const char *name,uint64_t first,
     }
     return v2_leave_operation(rc);
 }
+static int v2_check(void *v,uint32_t flags,uint64_t *errors)
+{
+    if(!errors)return IFS_FS_INVALID;
+    *errors=0u;
+    if(!v2_enter_operation())return IFS_FS_BUSY;
+    if(!live(v) || flags)return v2_leave_operation(IFS_FS_INVALID);
+    native_read_failure=IFS_FS_OK;
+    int rc=ifs_exfat_engine_check(&s.host,errors);
+    if(native_read_failure!=IFS_FS_OK){*errors=0u;rc=native_read_failure;}
+    return v2_leave_operation(rc);
+}
 static const IfsFsDefragOpsV2 group_defrag={
     .header={IFS_FS_GROUP_ABI_V2,sizeof(IfsFsDefragOpsV2),
              IFS_FS_GROUP_DEFRAG,0u,IFS_FS_DEFRAG_MAP},
@@ -530,9 +541,9 @@ static const IfsFsVolumeOpsV2 group_volume={
     .query=guarded_v2_query,.label=v2_label
 #else
              IFS_FS_VOLUME_QUERY|IFS_FS_VOLUME_SYNC|IFS_FS_VOLUME_FORMAT|
-             IFS_FS_VOLUME_LABEL_GET|IFS_FS_VOLUME_LABEL_SET},
+             IFS_FS_VOLUME_LABEL_GET|IFS_FS_VOLUME_LABEL_SET|IFS_FS_VOLUME_CHECK},
     .query=guarded_v2_query, .sync=guarded_v2_sync, .format=guarded_format,
-    .label=v2_label,.set_label=v2_set_label
+    .label=v2_label,.set_label=v2_set_label,.check=v2_check
 #endif
 };
 /* Native CORE and VOLUME callbacks use the same mounted exFAT FatFs state. */
