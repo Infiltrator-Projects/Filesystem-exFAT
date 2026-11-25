@@ -1,14 +1,7 @@
 # exFAT standalone release scope
 
-`exFAT.so` exposes the hosted Common V2 filesystem ABI. Its qualification
-uses independently formatted exFAT images and FAT32 negative controls.
-Firmware execution and Common V2 relocation and recovery remain pending.
+The canonical `exFAT.so` exposes Common V2 hosted filesystem operations and an embedded import-free freestanding reader. Both profiles are qualified separately against disposable real exFAT media, including 512-byte and 4 KiB transfer geometry, negative FAT32 controls, corrupted boot checksums and inconsistent geometry. The package tests exercise the actual extracted shared objects; physical BOOT handoff and general Common V2 relocation/recovery remain separate qualifications.
 
-The release builds `exfat.ko` separately against Linux 6.12.107. Its QEMU
-qualification mounts an exFAT image, writes and renames files, remounts it
-and checks it offline. Publication requires the shared-object and kernel
-tests on the release commit.
+The portable amd64 DEB installs only `/System/Filesystems/exFAT.so` and `/System/Resources/Documentation/Filesystem-exFAT.pdf`. The CPU-native RUN fetches its exact Git revision, verifies it and builds the aggressive local package with LTO and two-pass PGO. It contains no source archive or DEB. No per-format kernel module, separate EFI driver or FUSE fallback is distributed. Checksums are retained in CI evidence, not as additional release assets. GitHub generates source archives.
 
-The released Debian package contains the shared object, generated manual
-and kernel adapter. The adapter matches the tested kernel build and is
-stored under `/System/Kernel/Filesystems` for separate use.
+See the [release workflow](../.github/workflows/release.yml), [README](../README.md) and [immutable releases](https://github.com/Infiltrator-Projects/Filesystem-exFAT/releases). Historical Linux-driver qualification is not a current package requirement.
