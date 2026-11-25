@@ -552,6 +552,67 @@ static int v2_check(void *v,uint32_t flags,uint64_t *errors)
     return v2_leave_operation(rc);
 }
 #include "exfat_relocation.h"
+/* Walk a verified native bitmap, including bytes outside the data heap. */
+static int bitmap_page(uint64_t first,uint64_t limit,uint64_t base,uint64_t end,
+                       uint32_t unit,const uint8_t *bitmap,
+                       IfsFsAllocationRangeV2 *ranges,uint32_t capacity,uint32_t *written)
+{
+    uint64_t at=first;
+    if(at==limit)return IFS_FS_END;
+    while(at<limit && *written<capacity){
+        uint64_t next;uint32_t state;
+        if(at<base){next=base;state=IFS_FS_SPACE_RESERVED;}
+        else if(at>=end){next=limit;state=IFS_FS_SPACE_RESERVED;}
+        else {
+            uint32_t b=(uint32_t)((at-base)/unit);
+            int used=er_bit(bitmap,b+2u);
+            state=used?IFS_FS_SPACE_ALLOCATED:IFS_FS_SPACE_FREE;
+            ++b;
+            while((uint64_t)b*unit<end-base && (er_bit(bitmap,b+2u))==used)++b;
+            next=base+(uint64_t)b*unit;
+        }
+        ranges[(*written)++]=(IfsFsAllocationRangeV2){at,next-at,state,0u};
+        at=next;
+    }
+    return IFS_FS_OK;
+}
+static int allocation_map(void *v,uint64_t first,IfsFsAllocationRangeV2 *ranges,
+                          uint32_t capacity,uint32_t *written)
+{
+    if(!written)return IFS_FS_INVALID;
+    *written=0u;
+    if(!v2_enter_operation())return IFS_FS_BUSY;
+    const IfsFsHostRuntimeV2 *h=&s.host;
+    if(!live(v)||!ranges||!capacity||first>h->volume_bytes)
+        return v2_leave_operation(IFS_FS_INVALID);
+    uint32_t sector=0u,cluster=0u,base_sector=0u,bytes=0u;
+    EjGeom g;uint8_t header[4096];uint8_t *bitmap=NULL;
+    int rc=geometry(h,&sector,&cluster);if(rc!=IFS_FS_OK)goto done;
+    rc=ej_geometry(h,sector,&g);if(rc!=IFS_FS_OK)goto done;
+    rc=ej_select(h,&g,header);if(rc!=IFS_FS_OK)goto done;
+    if(exfat_le32(header+12)){rc=IFS_FS_CORRUPT;goto done;}
+    uint64_t errors=0u;
+    rc=ifs_exfat_engine_check(h,&errors);
+    if(rc!=IFS_FS_OK || errors){if(rc==IFS_FS_OK)rc=IFS_FS_CORRUPT;goto done;}
+    rc=ej_bitmap(h,&g,&base_sector,&bytes);if(rc!=IFS_FS_OK)goto done;
+    if(bytes<((uint64_t)g.clusters+7u)/8u || bytes>ER_BITMAP_MAX){rc=IFS_FS_CORRUPT;goto done;}
+    uint64_t base=(uint64_t)g.heap*sector,end=base+(uint64_t)g.clusters*g.unit;
+    if(end>h->volume_bytes || end>g.total*sector){rc=IFS_FS_CORRUPT;goto done;}
+    bitmap=h->allocate(h->context,bytes);
+    if(!bitmap){rc=IFS_FS_NO_MEMORY;goto done;}
+    rc=ifs_fs_host_read_bytes_v2(h,(uint64_t)base_sector*sector,bitmap,bytes);
+    if(rc==IFS_FS_OK)rc=bitmap_page(first,h->volume_bytes,base,end,g.unit,bitmap,ranges,capacity,written);
+done:
+    if(bitmap)h->release(h->context,bitmap);
+    if(rc!=IFS_FS_OK)*written=0u;
+    return v2_leave_operation(rc);
+}
+static const IfsFsAllocationOpsV2 allocation_group={
+    .header={IFS_FS_GROUP_ABI_V2,sizeof(IfsFsAllocationOpsV2),
+             IFS_FS_GROUP_ALLOCATION,0u,IFS_FS_ALLOCATION_ALL},
+    .map=allocation_map
+};
+
 static const IfsFsDefragOpsV2 group_defrag={
     .header={IFS_FS_GROUP_ABI_V2,sizeof(IfsFsDefragOpsV2),
              IFS_FS_GROUP_DEFRAG,0u,IFS_FS_DEFRAG_MAP|IFS_FS_DEFRAG_PLAN|
@@ -597,6 +658,7 @@ static const IfsFsGroupHeaderV2 *query_v2(
     if (id==IFS_FS_GROUP_VOLUME) return &group_volume.header;
 #if !defined(IFS_EXFAT_FIRMWARE_BUILD)
     if (id==IFS_FS_GROUP_DEFRAG) return &group_defrag.header;
+    if (id==IFS_FS_GROUP_ALLOCATION) return &allocation_group.header;
 #endif
     return NULL;
 }
@@ -614,7 +676,7 @@ static const IfsFsModuleApiV2 descriptor_v2={
     .group_mask=IFS_FS_GROUP_BIT(IFS_FS_GROUP_CORE)|
                 IFS_FS_GROUP_BIT(IFS_FS_GROUP_VOLUME)
 #if !defined(IFS_EXFAT_FIRMWARE_BUILD)
-                |IFS_FS_GROUP_BIT(IFS_FS_GROUP_DEFRAG)
+                |IFS_FS_GROUP_BIT(IFS_FS_GROUP_DEFRAG)|IFS_FS_GROUP_BIT(IFS_FS_GROUP_ALLOCATION)
 #endif
                 ,
     .query_group=query_v2
