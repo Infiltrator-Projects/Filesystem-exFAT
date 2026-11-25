@@ -1,5 +1,4 @@
 %PDF-1.4
-%‚„œ”
 1 0 obj
 << /Type /Catalog /Pages 2 0 R >>
 endobj
@@ -216,7 +215,7 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 21 0 R >>
 endobj
 21 0 obj
-<< /Length 2061 >>
+<< /Length 2055 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
 0.01 0.52 0.56 rg 50 747 116 5 re f
@@ -233,8 +232,8 @@ BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 614.0 Tm (1. Microsoft exFAT File Sy
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 585.0 Tm (https://learn.microsoft.com/en-us/windows/win32/fileio/exfat-specification) Tj ET
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 556.0 Tm (2. Microsoft FAT Specification \(predecessor family comparison\)) Tj ET
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 527.0 Tm (https://www.scs.stanford.edu/~zyedidia/docs/_other/fat.pdf) Tj ET
-BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 498.0 Tm (Implementation boundary: the installed InfiltratorOS .so, the optional Linux kernel .ko,) Tj ET
-BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 481.0 Tm (and the source-first installer are distinct products. The original filesystem design is) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 498.0 Tm (Implementation boundary: one installed Common V2 .so; no separate per-format driver.) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 481.0 Tm (The source-download installer builds that provider. The original filesystem design is) Tj ET
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 464.0 Tm (documented above; claims about the adapter's qualification require its own source, tests) Tj ET
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 447.0 Tm (and release evidence.) Tj ET
 endstream
@@ -460,43 +459,43 @@ endobj
 xref
 0 36
 0000000000 65535 f 
-0000000015 00000 n 
-0000000064 00000 n 
-0000000219 00000 n 
-0000000289 00000 n 
-0000000364 00000 n 
-0000000432 00000 n 
-0000000578 00000 n 
-0000003558 00000 n 
-0000003704 00000 n 
-0000005615 00000 n 
-0000005763 00000 n 
-0000007809 00000 n 
-0000007957 00000 n 
-0000009851 00000 n 
-0000009999 00000 n 
-0000011994 00000 n 
-0000012142 00000 n 
-0000014040 00000 n 
-0000014188 00000 n 
-0000016480 00000 n 
-0000016628 00000 n 
-0000018741 00000 n 
-0000018889 00000 n 
-0000020829 00000 n 
-0000020977 00000 n 
-0000022745 00000 n 
-0000022893 00000 n 
-0000024829 00000 n 
-0000024977 00000 n 
-0000027702 00000 n 
-0000027850 00000 n 
-0000030538 00000 n 
-0000030686 00000 n 
-0000033279 00000 n 
-0000033427 00000 n 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000213 00000 n 
+0000000283 00000 n 
+0000000358 00000 n 
+0000000426 00000 n 
+0000000572 00000 n 
+0000003552 00000 n 
+0000003698 00000 n 
+0000005609 00000 n 
+0000005757 00000 n 
+0000007803 00000 n 
+0000007951 00000 n 
+0000009845 00000 n 
+0000009993 00000 n 
+0000011988 00000 n 
+0000012136 00000 n 
+0000014034 00000 n 
+0000014182 00000 n 
+0000016474 00000 n 
+0000016622 00000 n 
+0000018729 00000 n 
+0000018877 00000 n 
+0000020817 00000 n 
+0000020965 00000 n 
+0000022733 00000 n 
+0000022881 00000 n 
+0000024817 00000 n 
+0000024965 00000 n 
+0000027690 00000 n 
+0000027838 00000 n 
+0000030526 00000 n 
+0000030674 00000 n 
+0000033267 00000 n 
+0000033415 00000 n 
 trailer
 << /Size 36 /Root 1 0 R >>
 startxref
-37136
+37124
 %%EOF
