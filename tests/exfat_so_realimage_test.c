@@ -14,7 +14,36 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-typedef struct { int fd; uint64_t size; uint32_t sector; unsigned writes,flushes,reads,fault_after_reads; int fault_reads; } Image;
+/* Test-only rollback saves original bytes of each actual host write.
+ * This retains a real regular-file image without recopying gigabytes of
+ * untouched media for each interruption boundary. Recovery writes are
+ * captured as well; rollback is never an operation of the provider. */
+typedef struct Undo { struct Undo *prev;uint64_t at;uint32_t n;uint8_t bytes[]; } Undo;
+typedef struct {
+    int fd;uint64_t size;uint32_t sector;
+    unsigned writes,flushes,reads,fault_after_reads;
+    int fault_reads,capture;
+    unsigned ops,cut,mode;
+    Undo *undo;
+} Image;
+static int save_original(Image *d,uint64_t at,uint32_t n)
+{
+    if(!d->capture)return 0;
+    Undo *u=malloc(sizeof(*u)+n);
+    if(!u)return -1;
+    if(pread(d->fd,u->bytes,n,(off_t)at)!=(ssize_t)n){free(u);return -1;}
+    u->at=at;u->n=n;u->prev=d->undo;d->undo=u;return 0;
+}
+static int rollback_image(Image *d)
+{
+    d->capture=0;d->cut=0;d->ops=0;
+    while(d->undo){
+        Undo *u=d->undo;d->undo=u->prev;
+        int bad=pwrite(d->fd,u->bytes,u->n,(off_t)u->at)!=(ssize_t)u->n;
+        free(u);if(bad)return -1;
+    }
+    return fsync(d->fd);
+}
 static int read_at(void *ctx,uint64_t at,void *p,uint32_t n) {
     Image *d=ctx;
     if(d->fault_reads || (d->fault_after_reads &&
@@ -26,14 +55,22 @@ static int read_at(void *ctx,uint64_t at,void *p,uint32_t n) {
 static int write_at(void *ctx,uint64_t at,const void *p,uint32_t n) {
     Image *d=ctx;
     if (!p || !d->sector || (at % d->sector) || (n % d->sector) ||
-        at>d->size || n>d->size-at || at>INT64_MAX ||
-        pwrite(d->fd,p,n,(off_t)at)!=(ssize_t)n) return -1;
+        at>d->size || n>d->size-at || at>INT64_MAX) return -1;
+    const int cut=d->capture && ++d->ops==d->cut;
+    if(cut && d->mode==0u)return -1;
+    if(cut && d->mode==3u)return 0; /* device acknowledges a dropped write */
+    uint32_t actual=cut && d->mode==1u?n/2u:n;
+    if(save_original(d,at,actual) ||
+       pwrite(d->fd,p,actual,(off_t)at)!=(ssize_t)actual)return -1;
     ++d->writes;
-    return 0;
+    return cut?-1:0;
 }
 static int flush_at(void *ctx) {
     Image *d=ctx;
+    const int cut=d->capture && ++d->ops==d->cut;
+    if(cut && d->mode==0u)return -1;
     if(fsync(d->fd))return -1;
+    if(cut && d->mode!=3u)return -1;
     ++d->flushes;return 0;
 }
 static void *allocate_at(void *ctx,size_t n) {(void)ctx;return malloc(n);}
@@ -365,6 +402,59 @@ int main(int argc,char **argv) {
             if(map->map(mounted,names[i],0u,e,8u,&n)!=IFS_FS_OK || n<2u)
                 return fail("relocation fixture is not physically fragmented");
         }
+        /* Baseline is the genuinely fragmented image, not a reconstructed
+         * successful layout. Measure the actual execution write/flush count,
+         * then fail each operation independently before a fresh mount. */
+        if(core->unmount(mounted)!=IFS_FS_OK)return fail("cold fault baseline");
+        mounted=NULL;info.structure_bytes=sizeof(info);
+        if(core->mount(&host,&mounted,&info)!=IFS_FS_OK)return fail("fault baseline remount");
+        void *probe_plan=NULL;uint64_t probe_moved=0u;
+        if(map->plan(mounted,"/",policy,&probe_plan)!=IFS_FS_OK || !probe_plan)
+            return fail("fault baseline plan");
+        d.capture=1;d.ops=d.cut=0;
+        if(map->execute(mounted,probe_plan,&probe_moved)!=IFS_FS_OK ||
+           map->verify(mounted,probe_plan)!=IFS_FS_OK)
+            return fail("fault baseline execute");
+        unsigned cuts=d.ops;d.capture=0;
+        map->release_plan(mounted,probe_plan);
+        if(!cuts || core->unmount(mounted)!=IFS_FS_OK || rollback_image(&d))
+            return fail("restore fragmented fault baseline");
+        unsigned recovered_transactions=0u;
+        for(unsigned mode=0u;mode<3u;++mode)for(unsigned cut=1u;cut<=cuts;++cut){
+            mounted=NULL;info.structure_bytes=sizeof(info);
+            if(core->mount(&host,&mounted,&info)!=IFS_FS_OK)return fail("interruption fixture mount");
+            void *fault_plan=NULL;uint64_t partial=0u;
+            if(map->plan(mounted,"/",policy,&fault_plan)!=IFS_FS_OK || !fault_plan)
+                return fail("interruption fixture plan");
+            d.capture=1;d.ops=0;d.cut=cut;d.mode=mode;
+            int status=map->execute(mounted,fault_plan,&partial);
+            d.cut=0;
+            if(status==IFS_FS_OK)return fail("injected host write/flush failure was ignored");
+            map->release_plan(mounted,fault_plan);
+            if(core->unmount(mounted)!=IFS_FS_OK)return fail("faulted session teardown");
+            mounted=NULL;info.structure_bytes=sizeof(info);
+            if(core->mount(&host,&mounted,&info)!=IFS_FS_OK)
+                return fail("cold redo recovery failed");
+            uint64_t replayed=0u;
+            if(map->recover(mounted,0u,&replayed)!=IFS_FS_OK || replayed>1u)
+                return fail("recovery result");
+            recovered_transactions+=(unsigned)replayed;
+            if(map->recover(mounted,0u,&replayed)!=IFS_FS_OK || replayed ||
+               vol->check(mounted,0u,&errors)!=IFS_FS_OK || errors)
+                return fail("recovery is not idempotent or ownership is corrupt");
+            for(unsigned i=0u;i<2u;++i)
+                if(core->read(mounted,names[i],0u,readback,4u*unit)!=IFS_FS_OK ||
+                   memcmp(readback,expected,4u*unit))
+                    return fail("interruption lost live payload");
+            if(core->unmount(mounted)!=IFS_FS_OK || rollback_image(&d))
+                return fail("restore interruption baseline");
+        }
+        if(!recovered_transactions)return fail("interruption matrix never exercised real redo");
+        printf("EXFAT-RELOCATION-RECOVERY-PASS policy=%u cuts=%u recovered=%u\n",
+               policy,cuts*3u,recovered_transactions);
+        mounted=NULL;info.structure_bytes=sizeof(info);
+        if(core->mount(&host,&mounted,&info)!=IFS_FS_OK)
+            return fail("restore original fragmented fixture");
         void *plan=NULL;
         unsigned writes=d.writes;uint64_t moved=0u,repaired=0u;
         if(map->plan(mounted,"/",policy,&plan)!=IFS_FS_OK || !plan || writes!=d.writes ||
