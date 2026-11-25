@@ -6283,7 +6283,7 @@ FRESULT f_mkfs (
 			if (sz_vol >= 0x80000) sz_au = 64;		/* >= 512Ks */
 			if (sz_vol >= 0x4000000) sz_au = 256;	/* >= 64Ms */
 		}
-		b_fat = b_vol + 32;										/* FAT start at offset 32 */
+		b_fat = b_vol + 128;										/* Reserve sectors 24..127 for native exFAT relocation redo */
 		sz_fat = (DWORD)((sz_vol / sz_au + 2) * 4 + ss - 1) / ss;	/* Number of FAT sectors */
 		b_data = (b_fat + sz_fat + sz_blk - 1) & ~((LBA_t)sz_blk - 1);	/* Align data area to the erase block boundary */
 		if (b_data - b_vol >= sz_vol / 2) LEAVE_MKFS(FR_MKFS_ABORTED);	/* Too small volume? */
@@ -6418,6 +6418,8 @@ FRESULT f_mkfs (
 			/* OEM/Reserved record (+9..+10) */
 			memset(buf, 0, ss);
 			for ( ; j < 11; j++) {
+				if (j == 9) memcpy(buf, "IFSExfatJournal1", 16); /* OEM parameter GUID */
+				else memset(buf, 0, ss);
 				for (i = 0; i < ss; sum = xsum32(buf[i++], sum)) ;	/* VBR checksum */
 				if (disk_write(pdrv, buf, sect++, 1) != RES_OK) LEAVE_MKFS(FR_DISK_ERR);
 			}

@@ -27,6 +27,8 @@ static struct {
     uintptr_t generation, handle;
     int mounted, writable;
     uint32_t cluster_bytes;
+    int journal_present;
+    uint64_t recovered;
 } s;
 static int host_ok(const IfsFsHostRuntimeV2 *h) {
     return ifs_fs_host_v2_valid(h) && h->volume_bytes>=512u;
@@ -180,6 +182,7 @@ static int geometry(const IfsFsHostRuntimeV2 *h,uint32_t *sector,uint32_t *clust
     if(status!=IFS_FS_OK)return status;
     return exfat_layout(b,h,*sector);
 }
+#include "exfat_journal.h"
 static IfsFatfsIo native(const IfsFsHostRuntimeV2 *h,uint32_t sector){
     IfsFatfsIo io={0};io.user=(void *)h;io.partition_bytes=h->volume_bytes;
     io.sector_bytes=sector;io.read_at=raw_read;io.write_at=raw_write;
@@ -192,6 +195,9 @@ static int probe(const IfsFsHostRuntimeV2 *h,uint32_t *variant){
     if(!host_ok(h))return IFS_FS_INVALID;
     if(s.mounted)return IFS_FS_BUSY;
     r=geometry(h,&sector,&cluster);if(r)return r;
+    int present=0;uint64_t pending=0u;
+    r=ej_mount(h,sector,1,&present,&pending);if(r)return r;
+    if(pending){*variant=64u;return IFS_FS_OK;}
     IfsFatfsIo io=native(h,sector);
     native_read_failure=IFS_FS_OK;
     r=ifs_exfat_engine_mount(&io);
@@ -219,6 +225,7 @@ static int mount(const IfsFsHostRuntimeV2 *h,void **v,IfsFsVolumeInfoV2 *info){
 #endif
     if(s.mounted||s.generation==UINTPTR_MAX)return IFS_FS_BUSY;
     r=geometry(h,&sector,&cluster);if(r)return r;
+    r=ej_mount(h,sector,0,&s.journal_present,&s.recovered);if(r)return r;
     /* Keep only the caller-supplied V2 prefix; older hosts do not have the
      * optional entropy field. Clamp the saved size to our own storage. */
     size_t host_bytes=h->structure_bytes<sizeof(s.host)?h->structure_bytes:sizeof(s.host);
@@ -253,7 +260,8 @@ static int guarded_mount(const IfsFsHostRuntimeV2 *h,void **v,IfsFsVolumeInfoV2 
 static int unmount(void *v){
     if(!live(v))return IFS_FS_INVALID;
     if(ifs_exfat_engine_unmount())return IFS_FS_IO_ERROR;
-    s.mounted=0;s.writable=0;s.handle=0;s.cluster_bytes=0u;return IFS_FS_OK;
+    s.mounted=0;s.writable=0;s.handle=0;s.cluster_bytes=0u;
+    s.journal_present=0;s.recovered=0u;return IFS_FS_OK;
 }
 static int guarded_unmount(void *v)
 {
@@ -428,8 +436,10 @@ static int format(const IfsFsHostRuntimeV2 *h,uint32_t variant,
     if (h->logical_sector_bytes < 512u || h->logical_sector_bytes > 4096u)
         return IFS_FS_INVALID;
     IfsFatfsIo io=native(h,h->logical_sector_bytes);
-    return ifs_exfat_engine_format(&io,0u) ?
-        IFS_FS_IO_ERROR:IFS_FS_OK;
+    if(ifs_exfat_engine_format(&io,0u))return IFS_FS_IO_ERROR;
+    EjGeom g;int rc=ej_geometry(h,h->logical_sector_bytes,&g);
+    if(rc!=IFS_FS_OK)return rc;
+    return ej_clear(h,&g);
 }
 static int guarded_format(const IfsFsHostRuntimeV2 *h,uint32_t variant,
                   const char *label,uint32_t flags)
