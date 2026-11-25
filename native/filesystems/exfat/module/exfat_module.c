@@ -216,7 +216,7 @@ done:
     if(rc!=FR_OK && (result==IFS_FS_OK || result==IFS_FS_END))
         result=exfat_common_failure(rc);
     if(result==IFS_FS_OK) {
-        memcpy(out,page,count*sizeof(*page));
+        for(uint32_t i=0;i<count;++i) out[i]=page[i];
         *written=count;
     }
     return result;
