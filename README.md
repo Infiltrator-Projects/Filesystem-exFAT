@@ -1,36 +1,36 @@
 # Filesystem-exFAT
 
-This repository owns the C exFAT filesystem implementation and its distributable
-`exFAT.so`. The embedded ChaN FatFs engine is compiled with the exFAT selector
-`IFS_FATFS_ONLY=64`. The original notices and third-party attributions are
-preserved from the [source import](https://github.com/Infiltrator-Projects/Filesystems/tree/41d2db4610320348831d5cf04a28b6a32a48c7af).
+## 1. Purpose and format scope
 
-## Common V2
+Microsoft exFAT; embedded format-selected ChaN FatFs engine. This repository owns the format-specific implementation of `exFAT.so` for InfiltratorOS.
 
-`exFAT.so` exports `infiltrator_filesystem_api_v2` for the hosted Common V2
-profile. It owns filesystem detection, file and directory operations, volume
-query, sync and formatting. Formatting uses the host's logical sector size.
-Writes require an exclusive target and durable host I/O.
+## 2. On-disk architecture and invariants
 
-The shared object uses Linux runtime libraries. BOOT requires a freestanding
-firmware-compatible module, so its loader rejects the published exFAT build.
-The Common V2 relocation and recovery group is pending.
+Boot regions, allocation bitmap, FAT and directory entry sets jointly identify allocation. Distinguish contiguous NoFatChain streams from FAT-linked chains, validate entry-set and name metadata, and use host logical sector geometry during formatting.
 
-## Build and install
+## 3. Common V2 implementation and capabilities
 
-Run `make test` with `exfatprogs` and `dosfstools` to qualify the shared object
-on disposable exFAT and FAT32 images. The native installer compiles from its
-embedded source and qualifies the hardware-optimised build with measured
-two-pass profile-guided optimisation. Use `--build-only --output DIRECTORY`
-to build a Debian package. Use `--kernel-build DIRECTORY` to supply a prepared
-kernel build with `Module.symvers`.
+The source declares hosted probe, mount, stat, enumeration, read, write, create, volume query, sync and format; the read-only profile does not expose the writable callbacks. Native read faults are preserved across namespace operations. The canonical entry point is `infiltrator_filesystem_api_v2`. Consumers must negotiate the actual profile and operation masks and use bounded, partition-relative host I/O. A source-level callback does not by itself establish that every format variant or host profile is qualified.
 
-The installer manages the module, generated manual and kernel adapter.
+## 4. Integrity, mutation, allocation and recovery
 
-- `/System/Filesystems/exFAT.so`
-- `/System/Resources/Documentation/Filesystem-exFAT.pdf`
-- `/System/Kernel/Filesystems/exfat.ko`
+Exclusive durable host I/O is required for writing. Hosted and freestanding qualification are separate; do not infer production BOOT acceptance, arbitrary relocation or recovery from ordinary file operations. For destructive operations, require the applicable exclusive writable host, durability contract and format-specific validation. Never silently substitute a kernel or FUSE driver or treat a rejected or unavailable operation as success. Preserve original disk-format semantics; relocation and recovery are separate from ordinary file I/O.
 
-InfiltratorOS uses `--system-package-mode` and manages these outputs
-individually. The separate Linux adapter is built and tested against its
-matching kernel. See the [release scope](docs/RELEASE_SCOPE.md).
+## 5. Build, installation and release
+
+The target installation is `/System/Filesystems/exFAT.so` and `/System/Resources/Documentation/Filesystem-exFAT.pdf`. The project release policy is a portable amd64 DEB and a CPU-native source-first RUN, with GitHub's automatic source archive; do not treat this policy statement as verification of the current installer payload. The release workflow is the authoritative executable build and package specification. Historical adapters and test artifacts are not additional production filesystem authorities.
+
+## 6. Qualification and limitations
+
+[Recorded qualification workflow](https://github.com/Infiltrator-Projects/Filesystem-exFAT/actions/runs/45526922601) · [Current workflows](https://github.com/Infiltrator-Projects/Filesystem-exFAT/actions?query=branch%3Amain). A successful workflow establishes the tested scope only, not complete original-format parity, physical-media crash safety, or production BOOT/kernel integration. Use disposable images for destructive qualification.
+
+## 7. Technical references and provenance
+
+- [Provider implementation](module/exfat_common.c)
+- [Native design or source provenance](native/filesystems/exfat/DESIGN.md)
+- [Migration and source history](docs/RELEASE_SCOPE.md)
+- [Original-format reference source](docs/exFAT.pages) and [PDF](docs/exFAT.pdf)
+- [Project philosophy](docs/PHILOSOPHY.md)
+- [Common ABI](https://github.com/Infiltrator-Projects/Libraries)
+
+The original-format reference and historical migration notes describe different evidence from the current production provider. When descriptions disagree, the current exported descriptor, implementation, executable tests and exact-revision release evidence take precedence.
