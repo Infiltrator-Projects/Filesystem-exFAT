@@ -5,6 +5,7 @@
 #ifndef IFS_EXFAT_ENGINE_INTERNAL_H
 #define IFS_EXFAT_ENGINE_INTERNAL_H
 #include <stdint.h>
+#include <infiltratr/filesystem_module_v2.h>
 #include "../../../portable/fatfs/fatfs_module.h"
 typedef struct {
     uint64_t size_bytes;
@@ -27,5 +28,6 @@ int ifs_exfat_engine_format(const IfsFatfsIo *,uint32_t);
 int ifs_exfat_engine_label(char *,uint32_t,uint32_t *);
 #if !defined(IFS_EXFAT_FIRMWARE_BUILD)
 int ifs_exfat_engine_set_label(const char *);
+int ifs_exfat_engine_map(const char *,uint64_t,IfsFsExtentV2 *,uint32_t,uint32_t *);
 #endif
 #endif

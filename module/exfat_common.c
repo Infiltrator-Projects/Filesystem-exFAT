@@ -497,6 +497,31 @@ static int v2_set_label(void *v,const char *label)
     return v2_leave_operation(rc);
 }
 #endif
+#if !defined(IFS_EXFAT_FIRMWARE_BUILD)
+static int v2_map_file(void *v,const char *name,uint64_t first,
+                      IfsFsExtentV2 *out,uint32_t capacity,uint32_t *written)
+{
+    if(!written)return IFS_FS_INVALID;
+    *written=0u;
+    if(!v2_enter_operation())return IFS_FS_BUSY;
+    if(!live(v) || !out || !capacity)return v2_leave_operation(IFS_FS_INVALID);
+    char p[4096];
+    int rc=path(name,p);
+    if(rc)return v2_leave_operation(rc);
+    native_read_failure=IFS_FS_OK;
+    rc=ifs_exfat_engine_map(p,first,out,capacity,written);
+    if(native_read_failure!=IFS_FS_OK) {
+        *written=0u;
+        rc=native_read_failure;
+    }
+    return v2_leave_operation(rc);
+}
+static const IfsFsDefragOpsV2 group_defrag={
+    .header={IFS_FS_GROUP_ABI_V2,sizeof(IfsFsDefragOpsV2),
+             IFS_FS_GROUP_DEFRAG,0u,IFS_FS_DEFRAG_MAP},
+    .map=v2_map_file
+};
+#endif
 static const IfsFsVolumeOpsV2 group_volume={
     .header={IFS_FS_GROUP_ABI_V2,sizeof(IfsFsVolumeOpsV2),
              IFS_FS_GROUP_VOLUME,0u,
@@ -532,6 +557,9 @@ static const IfsFsGroupHeaderV2 *query_v2(
     if (min>IFS_FS_GROUP_ABI_V2 || max<IFS_FS_GROUP_ABI_V2) return NULL;
     if (id==IFS_FS_GROUP_CORE) return &group_core.header;
     if (id==IFS_FS_GROUP_VOLUME) return &group_volume.header;
+#if !defined(IFS_EXFAT_FIRMWARE_BUILD)
+    if (id==IFS_FS_GROUP_DEFRAG) return &group_defrag.header;
+#endif
     return NULL;
 }
 __attribute__((used,section(".ifsmeta")))
@@ -546,7 +574,11 @@ static const IfsFsModuleApiV2 descriptor_v2={
     .runtime_profiles=IFS_FS_PROFILE_HOSTED,
 #endif
     .group_mask=IFS_FS_GROUP_BIT(IFS_FS_GROUP_CORE)|
-                IFS_FS_GROUP_BIT(IFS_FS_GROUP_VOLUME),
+                IFS_FS_GROUP_BIT(IFS_FS_GROUP_VOLUME)
+#if !defined(IFS_EXFAT_FIRMWARE_BUILD)
+                |IFS_FS_GROUP_BIT(IFS_FS_GROUP_DEFRAG)
+#endif
+                ,
     .query_group=query_v2
 };
 __attribute__((visibility("default")))

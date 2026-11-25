@@ -155,6 +155,72 @@ int ifs_exfat_engine_label(char *out,uint32_t capacity,uint32_t *bytes)
     return IFS_FS_OK;
 }
 #if !defined(IFS_EXFAT_FIRMWARE_BUILD)
+/* Hosted Common V2 mapping through the mounted FatFs engine. Seeking to
+ * the first byte of a cluster resolves its native chain (including exFAT
+ * NoFatChain streams); no duplicate directory or FAT decoder is involved.
+ * Each logical cluster is one extent; consumers may coalesce adjacent runs.
+ */
+int ifs_exfat_engine_map(const char *path,uint64_t first,IfsFsExtentV2 *out,
+                         uint32_t capacity,uint32_t *written)
+{
+    if(!written)return IFS_FS_INVALID;
+    *written=0u;
+    if(!selected || !path || !out || !capacity || capacity>128u)
+        return IFS_FS_INVALID;
+    FIL file;
+    FRESULT rc=f_open(&file,path,FA_READ);
+    if(rc!=FR_OK)return exfat_common_failure(rc);
+    int result=IFS_FS_OK;
+    const FATFS *fs=file.obj.fs;
+    const uint64_t unit=(uint64_t)fs->csize*device.sector_bytes;
+    const uint64_t size=(uint64_t)f_size(&file);
+    IfsFsExtentV2 page[128]={{0}};
+    uint32_t count=0u;
+    if(!unit || fs->n_fatent<2u || fs->fs_type!=FS_EXFAT ||
+       size>device.partition_bytes) {
+        result=IFS_FS_CORRUPT;
+        goto done;
+    }
+    const uint64_t total=size/unit+(size%unit!=0u);
+    if(first>=total){result=IFS_FS_END;goto done;}
+    count=(uint32_t)((total-first)<capacity?total-first:capacity);
+    for(uint32_t i=0u;i<count;++i) {
+        const uint64_t logical=(first+i)*unit;
+        rc=f_lseek(&file,(FSIZE_t)(logical+1u));
+        if(rc!=FR_OK){result=exfat_common_failure(rc);goto done;}
+        if(f_tell(&file)!=(FSIZE_t)(logical+1u) ||
+           file.clust<2u || file.clust>=fs->n_fatent) {
+            result=IFS_FS_CORRUPT;goto done;
+        }
+        const uint64_t base=(uint64_t)fs->database*device.sector_bytes;
+        const uint64_t cluster=(uint64_t)(file.clust-2u);
+        if(base>device.partition_bytes ||
+           cluster>(device.partition_bytes-base)/unit) {
+            result=IFS_FS_CORRUPT;goto done;
+        }
+        const uint64_t physical=base+cluster*unit;
+        if(unit>device.partition_bytes-physical) {
+            result=IFS_FS_CORRUPT;goto done;
+        }
+        for(uint32_t j=0u;j<i;++j) {
+            if(page[j].physical_offset==physical) {
+                result=IFS_FS_CORRUPT;goto done;
+            }
+        }
+        page[i].logical_offset=logical;
+        page[i].physical_offset=physical;
+        page[i].length=size-logical<unit?size-logical:unit;
+    }
+done:
+    rc=f_close(&file);
+    if(rc!=FR_OK && (result==IFS_FS_OK || result==IFS_FS_END))
+        result=exfat_common_failure(rc);
+    if(result==IFS_FS_OK) {
+        memcpy(out,page,count*sizeof(*page));
+        *written=count;
+    }
+    return result;
+}
 int ifs_exfat_engine_set_label(const char *label)
 {
     if(!selected||!label)return IFS_FS_INVALID;

@@ -11,7 +11,8 @@ int main(void)
     if (!ifs_fs_api_v2_valid(v2,"exfat") ||
         v2->runtime_profiles!=IFS_FS_PROFILE_HOSTED ||
         v2->group_mask!=(IFS_FS_GROUP_BIT(IFS_FS_GROUP_CORE)|
-                         IFS_FS_GROUP_BIT(IFS_FS_GROUP_VOLUME))) {
+                         IFS_FS_GROUP_BIT(IFS_FS_GROUP_VOLUME)|
+                         IFS_FS_GROUP_BIT(IFS_FS_GROUP_DEFRAG))) {
         fputs("Native exFAT Common V2 descriptor invalid\n",stderr);
         return 1;
     }
@@ -19,7 +20,11 @@ int main(void)
         (const IfsFsCoreOpsV2 *)ifs_fs_group_v2(v2,IFS_FS_GROUP_CORE);
     const IfsFsVolumeOpsV2 *volume=
         (const IfsFsVolumeOpsV2 *)ifs_fs_group_v2(v2,IFS_FS_GROUP_VOLUME);
-    if (!core || !volume ||
+    const IfsFsDefragOpsV2 *map=
+        (const IfsFsDefragOpsV2 *)ifs_fs_group_v2(v2,IFS_FS_GROUP_DEFRAG);
+    if (!map || map->header.capabilities!=IFS_FS_DEFRAG_MAP || !map->map ||
+        map->plan || map->execute || map->verify || map->recover ||
+        !core || !volume ||
         core->header.abi_version!=IFS_FS_GROUP_ABI_V2 ||
         core->header.capabilities!=IFS_FS_CORE_ALL ||
         !core->probe || !core->mount || !core->unmount ||
@@ -34,7 +39,6 @@ int main(void)
         !volume->label || !volume->set_label ||
         ifs_fs_group_v2(v2,IFS_FS_GROUP_HANDLES) ||
         ifs_fs_group_v2(v2,IFS_FS_GROUP_METADATA) ||
-        ifs_fs_group_v2(v2,IFS_FS_GROUP_DEFRAG) ||
         ifs_fs_group_v2(v2,IFS_FS_GROUP_STREAMS)) {
         fputs("exFAT V2 CORE/VOLUME callback mismatch\n",stderr);
         return 2;

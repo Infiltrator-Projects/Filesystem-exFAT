@@ -84,14 +84,18 @@ int main(int argc,char **argv) {
     if(!ifs_fs_api_v2_valid(api,"exfat") ||
        api->group_mask !=
            (IFS_FS_GROUP_BIT(IFS_FS_GROUP_CORE)|
-            IFS_FS_GROUP_BIT(IFS_FS_GROUP_VOLUME)) ||
+            IFS_FS_GROUP_BIT(IFS_FS_GROUP_VOLUME)|
+            IFS_FS_GROUP_BIT(IFS_FS_GROUP_DEFRAG)) ||
        (api->runtime_profiles & (IFS_FS_PROFILE_KERNEL|IFS_FS_PROFILE_FIRMWARE)))
         return fail("strict V2 descriptor not qualified");
     const IfsFsCoreOpsV2 *core =
         (const IfsFsCoreOpsV2 *)ifs_fs_group_v2(api,IFS_FS_GROUP_CORE);
     const IfsFsVolumeOpsV2 *vol =
         (const IfsFsVolumeOpsV2 *)ifs_fs_group_v2(api,IFS_FS_GROUP_VOLUME);
-    if(!core || !vol || core->header.capabilities!=IFS_FS_CORE_ALL ||
+    const IfsFsDefragOpsV2 *map=
+        (const IfsFsDefragOpsV2 *)ifs_fs_group_v2(api,IFS_FS_GROUP_DEFRAG);
+    if(!map || !map->map || map->header.capabilities!=IFS_FS_DEFRAG_MAP ||
+       !core || !vol || core->header.capabilities!=IFS_FS_CORE_ALL ||
        vol->header.capabilities!=
          (IFS_FS_VOLUME_QUERY|IFS_FS_VOLUME_SYNC|IFS_FS_VOLUME_FORMAT|
           IFS_FS_VOLUME_LABEL_GET|IFS_FS_VOLUME_LABEL_SET) || !vol->label || !vol->set_label)
@@ -168,6 +172,30 @@ int main(int argc,char **argv) {
        core->create(mounted,"/TESTDIR/CHILD",IFS_FS_ENTRY_DIRECTORY)!=IFS_FS_OK ||
        core->rename(mounted,"/TESTDIR","/TESTDIR/CHILD/LOOP")==IFS_FS_OK)
         return fail("V2 rename, missing paths, bounds or recursive directory safety");
+    /* The native provider's physical extents must account for exactly the
+     * file length, with the actual payload at the reported physical offsets.
+     * Exercise a one-extent page and an explicit END, without any writes. */
+    {
+        uint64_t logical=0u,first=0u;
+        unsigned writes=d.writes;
+        for(;;) {
+            IfsFsExtentV2 e={0};
+            uint32_t got=123u;
+            int status=map->map(mounted,"/TESTDIR/OUTPUT.BIN",first,&e,1u,&got);
+            if(status==IFS_FS_END) {
+                if(got || logical!=sizeof(data))return fail("exFAT extent EOF");
+                break;
+            }
+            if(status!=IFS_FS_OK || got!=1u || e.logical_offset!=logical ||
+               !e.length || e.length>sizeof(data)-logical || e.flags || e.reserved ||
+               e.physical_offset>d.size || e.length>d.size-e.physical_offset ||
+               pread(d.fd,back,(size_t)e.length,(off_t)e.physical_offset)!=(ssize_t)e.length ||
+               memcmp(back,data+logical,(size_t)e.length))
+                return fail("exFAT provider extent does not identify native payload");
+            logical+=e.length;++first;
+        }
+        if(d.writes!=writes)return fail("exFAT read-only extent mapping wrote media");
+    }
     /* Inject an actual host I/O failure after a successful mount. Missing
      * files and hardware errors must not be reported interchangeably. */
     d.fault_reads=1;
