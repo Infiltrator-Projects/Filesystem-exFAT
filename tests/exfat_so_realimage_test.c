@@ -94,7 +94,7 @@ int main(int argc,char **argv) {
         (const IfsFsVolumeOpsV2 *)ifs_fs_group_v2(api,IFS_FS_GROUP_VOLUME);
     const IfsFsDefragOpsV2 *map=
         (const IfsFsDefragOpsV2 *)ifs_fs_group_v2(api,IFS_FS_GROUP_DEFRAG);
-    if(!map || !map->map || map->header.capabilities!=IFS_FS_DEFRAG_MAP ||
+    if(!map || !map->map || map->header.capabilities!=(IFS_FS_DEFRAG_MAP|IFS_FS_DEFRAG_PLAN|IFS_FS_DEFRAG_EXECUTE|IFS_FS_DEFRAG_VERIFY|IFS_FS_DEFRAG_RECOVER) || !map->plan || !map->execute || !map->verify || !map->recover || !map->release_plan ||
        !core || !vol || core->header.capabilities!=IFS_FS_CORE_ALL ||
        vol->header.capabilities!=
          (IFS_FS_VOLUME_QUERY|IFS_FS_VOLUME_SYNC|IFS_FS_VOLUME_FORMAT|
@@ -341,6 +341,58 @@ int main(int argc,char **argv) {
        core->unmount(mounted)!=IFS_FS_OK)
         return fail("V2 formatted media cannot be remounted and written");
 
+    /* The real writer must physically relocate fragmented streams on
+     * separately created disposable native images for both policies. */
+    for(uint32_t policy=0u;policy<=10u;policy+=10u){
+        if(vol->format(&host,64u,NULL,0u)!=IFS_FS_OK)return fail("native relocation format");
+        mounted=NULL;info.structure_bytes=sizeof(info);
+        if(core->mount(&host,&mounted,&info)!=IFS_FS_OK ||
+           info.block_bytes<512u || info.block_bytes>65536u)
+            return fail("native relocation fixture mount");
+        uint32_t unit=info.block_bytes;
+        uint8_t *expected=malloc(4u*unit),*readback=malloc(4u*unit);
+        if(!expected||!readback)return fail("relocation payload allocation");
+        for(uint32_t j=0u;j<4u*unit;++j)expected[j]=(uint8_t)(j*19u+j/256u+policy);
+        const char *names[]={"/A.BIN","/B.BIN"};
+        for(unsigned i=0u;i<2u;++i)
+            if(core->create(mounted,names[i],IFS_FS_ENTRY_FILE)!=IFS_FS_OK)
+                return fail("relocation fixture create");
+        for(unsigned j=0u;j<4u;++j)for(unsigned i=0u;i<2u;++i)
+            if(core->write(mounted,names[i],(uint64_t)j*unit,expected+j*unit,unit)!=IFS_FS_OK)
+                return fail("fragmented alternating native writes");
+        for(unsigned i=0u;i<2u;++i){
+            IfsFsExtentV2 e[8];uint32_t n=0u;
+            if(map->map(mounted,names[i],0u,e,8u,&n)!=IFS_FS_OK || n<2u)
+                return fail("relocation fixture is not physically fragmented");
+        }
+        void *plan=NULL;
+        unsigned writes=d.writes;uint64_t moved=0u,repaired=0u;
+        if(map->plan(mounted,"/",policy,&plan)!=IFS_FS_OK || !plan || writes!=d.writes ||
+           core->write(mounted,names[0],0u,expected,1u)!=IFS_FS_BUSY ||
+           map->execute(mounted,plan,&moved)!=IFS_FS_OK || moved<8u*unit ||
+           map->verify(mounted,plan)!=IFS_FS_OK)
+            return fail("native exFAT planned relocation execution");
+        map->release_plan(mounted,plan);
+        if(map->recover(mounted,0u,&repaired)!=IFS_FS_OK || repaired ||
+           core->unmount(mounted)!=IFS_FS_OK)
+            return fail("clean relocation journal recovery");
+        mounted=NULL;info.structure_bytes=sizeof(info);
+        if(core->mount(&host,&mounted,&info)!=IFS_FS_OK)
+            return fail("cold relocation remount");
+        for(unsigned i=0u;i<2u;++i){
+            IfsFsExtentV2 e={0};uint32_t n=0u;
+            if(map->map(mounted,names[i],0u,&e,1u,&n)!=IFS_FS_OK ||
+               n!=1u || e.length!=4u*unit ||
+               map->map(mounted,names[i],1u,&e,1u,&n)!=IFS_FS_END || n ||
+               core->read(mounted,names[i],0u,readback,4u*unit)!=IFS_FS_OK ||
+               memcmp(readback,expected,4u*unit))
+                return fail("cold native relocation physical map or payload mismatch");
+        }
+        if(vol->check(mounted,0u,&errors)!=IFS_FS_OK || errors ||
+           core->unmount(mounted)!=IFS_FS_OK)
+            return fail("cold relocated allocation ownership");
+        free(expected);free(readback);
+    }
     host=host_for(&d,0);
     if(vol->format(&host,64u,NULL,0u)!=IFS_FS_ACCESS)
         return fail("read-only format incorrectly permitted");

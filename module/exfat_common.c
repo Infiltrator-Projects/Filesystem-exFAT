@@ -27,13 +27,17 @@ static struct {
     uintptr_t generation, handle;
     int mounted, writable;
     uint32_t cluster_bytes;
-    int journal_present;
+    int journal_present,engine_attached,fault;
     uint64_t recovered;
 } s;
 static int host_ok(const IfsFsHostRuntimeV2 *h) {
     return ifs_fs_host_v2_valid(h) && h->volume_bytes>=512u;
 }
-static int live(void *v){return s.mounted && s.handle && (uintptr_t)v==s.handle;}
+static int live(void *v){return s.mounted && !s.fault && s.handle && (uintptr_t)v==s.handle;}
+#if !defined(IFS_EXFAT_FIRMWARE_BUILD)
+static int er_has_plan(void);
+static void er_discard(void);
+#endif
 /* Native FatFs sectors may be smaller than a host's logical blocks.
  * Every read, write and short transfer must obey Common V2 alignment,
  * maximum transfer and exclusive read-modify-write guarantees. */
@@ -243,8 +247,9 @@ static int mount(const IfsFsHostRuntimeV2 *h,void **v,IfsFsVolumeInfoV2 *info){
     s.writable=0;
 #else
     s.writable=!(h->capabilities&IFS_FS_HOST_READ_ONLY) &&
-        (h->capabilities&IFS_FS_HOST_EXCLUSIVE) && h->write_at && h->flush;
+        (h->capabilities&IFS_FS_HOST_EXCLUSIVE) && (h->capabilities&IFS_FS_HOST_DURABLE) && h->write_at && h->flush;
 #endif
+    s.engine_attached=1;s.fault=0;
     s.mounted=1;s.cluster_bytes=cluster;s.handle=++s.generation;
     info->variant=64u;info->max_name_bytes=765u;info->block_bytes=cluster;
     info->total_bytes=total;info->free_bytes=free_bytes;*v=(void *)s.handle;
@@ -258,8 +263,12 @@ static int guarded_mount(const IfsFsHostRuntimeV2 *h,void **v,IfsFsVolumeInfoV2 
 }
 
 static int unmount(void *v){
-    if(!live(v))return IFS_FS_INVALID;
-    if(ifs_exfat_engine_unmount())return IFS_FS_IO_ERROR;
+    if(!s.mounted || !v || (uintptr_t)v!=s.handle)return IFS_FS_INVALID;
+    if(s.engine_attached && ifs_exfat_engine_unmount())return IFS_FS_IO_ERROR;
+#if !defined(IFS_EXFAT_FIRMWARE_BUILD)
+    er_discard();
+#endif
+    s.engine_attached=0;s.fault=0;
     s.mounted=0;s.writable=0;s.handle=0;s.cluster_bytes=0u;
     s.journal_present=0;s.recovered=0u;return IFS_FS_OK;
 }
@@ -356,6 +365,7 @@ static int guarded_read_file(void *v,const char *name,uint64_t at,void *out,uint
 static int write_file(void *v,const char *name,uint64_t at,const void *data,uint32_t n){
     char p[4096];if(!live(v)||(!data&&n))return IFS_FS_INVALID;
     if(!s.writable)return IFS_FS_ACCESS;
+    if(er_has_plan())return IFS_FS_BUSY;
     int r=path(name,p);if(r)return r;
     return ifs_exfat_engine_write64(p,at,data,n)?
         IFS_FS_IO_ERROR:IFS_FS_OK;
@@ -369,6 +379,7 @@ static int guarded_write_file(void *v,const char *name,uint64_t at,const void *d
 static int create(void *v,const char *name,uint32_t type){
     char p[4096];if(!live(v))return IFS_FS_INVALID;
     if(!s.writable)return IFS_FS_ACCESS;
+    if(er_has_plan())return IFS_FS_BUSY;
     int r=path(name,p);if(r)return r;
     if(!p[3])return IFS_FS_INVALID;
     if(type==IFS_FS_ENTRY_FILE)r=ifs_exfat_engine_create(p);
@@ -385,6 +396,7 @@ static int guarded_create(void *v,const char *name,uint32_t type)
 static int remove_path(void *v,const char *name){
     char p[4096];if(!live(v))return IFS_FS_INVALID;
     if(!s.writable)return IFS_FS_ACCESS;
+    if(er_has_plan())return IFS_FS_BUSY;
     int r=path(name,p);if(r)return r;
     if(!p[3])return IFS_FS_INVALID;
     return ifs_exfat_engine_remove(p)?IFS_FS_IO_ERROR:IFS_FS_OK;
@@ -398,6 +410,7 @@ static int guarded_remove_path(void *v,const char *name)
 static int rename_path(void *v,const char *a,const char *b){
     char x[4096],y[4096];if(!live(v))return IFS_FS_INVALID;
     if(!s.writable)return IFS_FS_ACCESS;
+    if(er_has_plan())return IFS_FS_BUSY;
     int r=path(a,x);if(r)return r;
     r=path(b,y);if(r)return r;
     if(!x[3]||!y[3])return IFS_FS_INVALID;
@@ -412,6 +425,7 @@ static int guarded_rename_path(void *v,const char *a,const char *b)
 static int truncate_path(void *v,const char *name,uint64_t size){
     char p[4096];if(!live(v))return IFS_FS_INVALID;
     if(!s.writable)return IFS_FS_ACCESS;
+    if(er_has_plan())return IFS_FS_BUSY;
     int r=path(name,p);if(r)return r;
     return ifs_exfat_engine_truncate64(p,size)?
         IFS_FS_IO_ERROR:IFS_FS_OK;
@@ -537,10 +551,13 @@ static int v2_check(void *v,uint32_t flags,uint64_t *errors)
     if(native_read_failure!=IFS_FS_OK){*errors=0u;rc=native_read_failure;}
     return v2_leave_operation(rc);
 }
+#include "exfat_relocation.h"
 static const IfsFsDefragOpsV2 group_defrag={
     .header={IFS_FS_GROUP_ABI_V2,sizeof(IfsFsDefragOpsV2),
-             IFS_FS_GROUP_DEFRAG,0u,IFS_FS_DEFRAG_MAP},
-    .map=v2_map_file
+             IFS_FS_GROUP_DEFRAG,0u,IFS_FS_DEFRAG_MAP|IFS_FS_DEFRAG_PLAN|
+             IFS_FS_DEFRAG_EXECUTE|IFS_FS_DEFRAG_VERIFY|IFS_FS_DEFRAG_RECOVER},
+    .map=v2_map_file,.plan=er_guard_plan,.execute=er_guard_execute,
+    .verify=er_guard_verify,.recover=er_guard_recover,.release_plan=er_guard_release
 };
 #endif
 static const IfsFsVolumeOpsV2 group_volume={

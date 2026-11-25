@@ -22,8 +22,8 @@ int main(void)
         (const IfsFsVolumeOpsV2 *)ifs_fs_group_v2(v2,IFS_FS_GROUP_VOLUME);
     const IfsFsDefragOpsV2 *map=
         (const IfsFsDefragOpsV2 *)ifs_fs_group_v2(v2,IFS_FS_GROUP_DEFRAG);
-    if (!map || map->header.capabilities!=IFS_FS_DEFRAG_MAP || !map->map ||
-        map->plan || map->execute || map->verify || map->recover ||
+    if (!map || map->header.capabilities!=(IFS_FS_DEFRAG_MAP|IFS_FS_DEFRAG_PLAN|IFS_FS_DEFRAG_EXECUTE|IFS_FS_DEFRAG_VERIFY|IFS_FS_DEFRAG_RECOVER) || !map->map ||
+        !map->plan || !map->execute || !map->verify || !map->recover || !map->release_plan ||
         !core || !volume ||
         core->header.abi_version!=IFS_FS_GROUP_ABI_V2 ||
         core->header.capabilities!=IFS_FS_CORE_ALL ||
