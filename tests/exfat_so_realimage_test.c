@@ -213,6 +213,77 @@ int main(int argc,char **argv) {
     if(vol->check(mounted,0u,&errors)!=IFS_FS_OK || errors ||
        d.writes!=writes_before_check)
         return fail("clean native exFAT ownership check");
+    /* Independently alter the allocation bitmap on the disposable disk.
+     * Cold-mount each corruption, require CHECK to detect it without any
+     * media mutation, and restore the original bitmap before continuing. */
+    {
+        uint8_t boot[512],system[32],original;
+        IfsFsExtentV2 root={0},file={0}; uint32_t count=0u;
+        if(pread(d.fd,boot,sizeof boot,0)!=(ssize_t)sizeof boot ||
+           map->map(mounted,"/",0u,&root,1u,&count)!=IFS_FS_OK || count!=1u ||
+           map->map(mounted,"/TESTDIR/OUTPUT.BIN",0u,&file,1u,&count)!=IFS_FS_OK || count!=1u)
+            return fail("bitmap corruption fixture geometry");
+        uint64_t heap=0u,clusters=0u;
+        for(unsigned k=0u;k<4u;++k) {
+            heap|=(uint64_t)boot[88u+k]<<(8u*k);
+            clusters|=(uint64_t)boot[92u+k]<<(8u*k);
+        }
+        heap*=UINT64_C(1)<<boot[108];
+        uint64_t bitmap=UINT64_MAX,bitmap_bytes=0u;
+        for(uint64_t off=0u;off+32u<=root.length;off+=32u) {
+            if(pread(d.fd,system,32u,(off_t)(root.physical_offset+off))!=32)
+                return fail("read independent bitmap directory record");
+            if(system[0]==0x81u) {
+                uint32_t first=0u;
+                for(unsigned k=0u;k<4u;++k)first|=(uint32_t)system[20u+k]<<(8u*k);
+                for(unsigned k=0u;k<8u;++k)bitmap_bytes|=(uint64_t)system[24u+k]<<(8u*k);
+                if(first<2u)return fail("invalid bitmap cluster");
+                bitmap=heap+(uint64_t)(first-2u)*info.block_bytes;
+                break;
+            }
+        }
+        if(bitmap==UINT64_MAX || bitmap_bytes!=(clusters+7u)/8u ||
+           bitmap>d.size || bitmap_bytes>d.size-bitmap ||
+           file.physical_offset<heap || (file.physical_offset-heap)%info.block_bytes)
+            return fail("invalid independent allocation bitmap bounds");
+        uint64_t referenced=(file.physical_offset-heap)/info.block_bytes;
+        uint64_t orphan=UINT64_MAX;
+        for(uint64_t k=0u;k<clusters;++k) {
+            if(pread(d.fd,&original,1u,(off_t)(bitmap+k/8u))!=1)
+                return fail("read allocation bitmap");
+            if(!(original&(1u<<(k%8u)))){orphan=k;break;}
+        }
+        if(orphan==UINT64_MAX || referenced>=clusters ||
+           core->unmount(mounted)!=IFS_FS_OK)
+            return fail("no free cluster for independent orphan fixture");
+        uint64_t bits[2]={orphan,referenced};
+        for(unsigned k=0u;k<2u;++k) {
+            uint64_t off=bitmap+bits[k]/8u;
+            uint8_t mask=(uint8_t)(1u<<(bits[k]%8u));
+            if(pread(d.fd,&original,1u,(off_t)off)!=1 ||
+               (!!(original&mask))!=(k!=0u))
+                return fail("bitmap fixture bit has wrong original state");
+            uint8_t damaged=(uint8_t)(original^mask);
+            if(pwrite(d.fd,&damaged,1u,(off_t)off)!=1 || fsync(d.fd))
+                return fail("inject bitmap corruption");
+            mounted=NULL;info.structure_bytes=sizeof(info);
+            if(core->mount(&host,&mounted,&info)!=IFS_FS_OK)
+                return fail("mount deliberately inconsistent allocation bitmap");
+            unsigned writes=d.writes;errors=0u;
+            if(vol->check(mounted,0u,&errors)!=IFS_FS_OK || errors!=1u ||
+               d.writes!=writes)
+                return fail("native check missed an orphan or falsely free live cluster");
+            if(core->unmount(mounted)!=IFS_FS_OK ||
+               pwrite(d.fd,&original,1u,(off_t)off)!=1 || fsync(d.fd))
+                return fail("restore bitmap corruption fixture");
+        }
+        mounted=NULL;info.structure_bytes=sizeof(info);
+        if(core->mount(&host,&mounted,&info)!=IFS_FS_OK ||
+           vol->check(mounted,0u,&errors)!=IFS_FS_OK || errors ||
+           core->read(mounted,"/TESTDIR/OUTPUT.BIN",0u,back,sizeof(back))!=IFS_FS_OK ||
+           memcmp(back,data,sizeof(data)))
+            return fail("restored allocation and full original payload");
+    }
     /* Inject an actual host I/O failure after a successful mount. Missing
      * files and hardware errors must not be reported interchangeably. */
     d.fault_reads=1;
