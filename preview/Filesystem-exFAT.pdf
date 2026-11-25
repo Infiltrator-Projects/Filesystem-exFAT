@@ -460,7 +460,7 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 37 0 R >>
 endobj
 37 0 obj
-<< /Length 1819 >>
+<< /Length 1910 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
 0.01 0.52 0.56 rg 50 747 116 5 re f
@@ -473,18 +473,19 @@ BT /F2 12 Tf 0.03 0.54 0.59 rg 1 0 0 1 50 695 Tm (Origin, scope and non-compatib
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 660 Tm (Microsoft introduced exFAT with Windows Embedded CE 6.0 in November 2006; Vista SP1 and Windows) Tj ET
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 644 Tm (XP updates expanded deployment. SDXC uses exFAT for portable large media. Reverse-engineering) Tj ET
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 628 Tm (work appeared around 2010; Microsoft published the exFAT specification in August 2019. It is not a) Tj ET
-BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 612 Tm (FAT32 extension using the old BPB or directory entry. MBR type 0x07 is shared with NTFS/HPFS and is) Tj ET
-BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 596 Tm (not a unique identification; inspect the actual boot structure. The 64-bit file-length field is not permission to) Tj ET
-BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 580 Tm (exceed the volume, cluster heap or implementation limits. TexFAT is a distinct transactional extension;) Tj ET
-BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 564 Tm (baseline exFAT must not claim TexFAT semantics or ordinary FAT32+ support. FATX, Turbo FAT and) Tj ET
-BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 548 Tm (classic VFAT are not exFAT profiles.) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 612 Tm (FAT32 extension using the old BPB or directory entry. MBR type 0x07 and GPT basic data GUID) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 596 Tm (EBD0A0A2-B9E5-4433-87C0-68B6B72699C7 are not unique identifications; inspect the actual boot) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 580 Tm (structure. The 64-bit file-length field is not permission to exceed the volume, cluster heap or) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 564 Tm (implementation limits. TexFAT is a distinct transactional extension; baseline exFAT must not claim) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 548 Tm (TexFAT semantics or ordinary FAT32+ support. FATX, Turbo FAT and classic VFAT are not exFAT) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 532 Tm (profiles.) Tj ET
 endstream
 endobj
 38 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 39 0 R >>
 endobj
 39 0 obj
-<< /Length 2154 >>
+<< /Length 2485 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
 0.01 0.52 0.56 rg 50 747 116 5 re f
@@ -499,18 +500,20 @@ BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 644 Tm (followed by three spaces\); 
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 628 Tm (84:4 FatLength; 88:4 ClusterHeapOffset; 92:4 ClusterCount; 96:4 FirstClusterOfRootDirectory; 100:4) Tj ET
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 612 Tm (VolumeSerialNumber; 104:2 FileSystemRevision; 106:2 VolumeFlags; 108:1 BytesPerSectorShift; 109:1) Tj ET
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 596 Tm (SectorsPerClusterShift; 110:1 NumberOfFats; 111:1 DriveSelect; 112:1 PercentInUse; 113:7 reserved;) Tj ET
-BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 580 Tm (120:390 BootCode; 510:2 BootSignature \(55 AA\); remaining bytes if sector >512 are reserved. Main) Tj ET
-BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 564 Tm (region sectors 0..11, backup 12..23; each contains boot, eight extended boot sectors, OEM parameters,) Tj ET
-BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 548 Tm (reserved sector and checksum sector. Sector size 2^shift \(512..4096\); cluster size 2^\(both shifts\), at most) Tj ET
-BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 532 Tm (32 MiB. Check FAT and heap extents against declared volume and host bounds; cluster n maps to) Tj ET
-BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 516 Tm (heap_offset + \(n-2\)*sectors_per_cluster.) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 580 Tm (120:390 BootCode; 510:2 BootSignature \(55 AA\); bytes after 512, if present, have undefined contents.) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 564 Tm (Main region sectors 0..11, backup 12..23; each contains boot, eight extended boot sectors, OEM) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 548 Tm (parameters, reserved sector and checksum sector. Sector size 2^shift \(512..4096\); cluster size 2^\(both) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 532 Tm (shifts\), at most 32 MiB. FatOffset >= 24; FatLength >= ceil\(4*\(ClusterCount+2\)/sector_bytes\);) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 516 Tm (ClusterHeapOffset >= FatOffset + NumberOfFats*FatLength. VolumeLength >= 1 MiB in sectors; revision) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 500 Tm (1.00 uses major 1 and minor 0. Check FAT and heap extents against declared volume and host bounds;) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 484 Tm (cluster n maps to heap_offset + \(n-2\)*sectors_per_cluster.) Tj ET
 endstream
 endobj
 40 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 41 0 R >>
 endobj
 41 0 obj
-<< /Length 2123 >>
+<< /Length 2488 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
 0.01 0.52 0.56 rg 50 747 116 5 re f
@@ -528,15 +531,17 @@ BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 596 Tm (revision. Allocation bitmap 
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 580 Tm (FAT[1]=0xFFFFFFFF; normal successor 2..ClusterCount+1, bad=0xFFFFFFF7, EOC=0xFFFFFFFF.) Tj ET
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 564 Tm (NoFatChain streams use a contiguous range, FAT is required for root directory; bitmap is allocation) Tj ET
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 548 Tm (authority. Check both range and bitmap ownership. If two FATs exist, use the active FAT/bitmap pair;) Tj ET
-BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 532 Tm (inactive FAT is stale, not an automatic mirror. Maximum cluster count 2^32-11, subject to heap and) Tj ET
-BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 516 Tm (volume size. PercentInUse is a hint, 0xFF unknown.) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 532 Tm (inactive FAT is stale, not an automatic mirror. Only TexFAT-aware implementations switch active pairs.) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 516 Tm (ClearToZero must be cleared before mutation. Maximum cluster count 2^32-11, subject to heap and) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 500 Tm (volume size; Microsoft recommends at most 2^24-2 clusters. Minimum heap is 2+NumberOfFats clusters.) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 484 Tm (Maximum directory storage is 256 MiB \(8,388,608 records\). PercentInUse is a hint, 0xFF unknown.) Tj ET
 endstream
 endobj
 42 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 43 0 R >>
 endobj
 43 0 obj
-<< /Length 2097 >>
+<< /Length 2425 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
 0.01 0.52 0.56 rg 50 747 116 5 re f
@@ -553,15 +558,17 @@ BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 612 Tm (count at 1, set checksum at 
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 596 Tm (each\), create/modify 10ms at 20/21, UTC offsets at 22/23/24. Stream Extension 0xC0: flags at 1, name) Tj ET
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 580 Tm (length at 3, name hash at 4 \(2\), ValidDataLength at 8 \(8\), first cluster at 20 \(4\), DataLength at 24 \(8\). File) Tj ET
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 564 Tm (Name 0xC1: flags at 1, 15 UTF-16 units at 2. Validate set order, counts and exact checksum before use;) Tj ET
-BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 548 Tm (unknown critical primary types require refusal and unknown critical secondary types prevent interpreting) Tj ET
-BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 532 Tm (the affected set; preserve benign extension entries. No short-name alias and no VFAT 0x0F records.) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 548 Tm (unknown critical primary types require refusal and unknown critical secondary types constrain permitted) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 532 Tm (access to the affected set. This project may conservatively refuse it; Microsoft section 8.2 permits limited) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 516 Tm (enumeration, traversal and deletion under specific conditions. Preserve unknown benign entries and their) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 500 Tm (allocation; refuse mutations not fully qualified. No short-name alias and no VFAT 0x0F records.) Tj ET
 endstream
 endobj
 44 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 45 0 R >>
 endobj
 45 0 obj
-<< /Length 2285 >>
+<< /Length 2378 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
 0.01 0.52 0.56 rg 50 747 116 5 re f
@@ -579,9 +586,9 @@ BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 596 Tm (length and mapping; preserve
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 580 Tm (UTF-16 code units, with ceil\(length/15\) name entries. FAT-style 32-bit timestamps encode seconds/2,) Tj ET
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 564 Tm (minute, hour, day, month, year since 1980; create/modify 10ms increments 0..199. UTC offset is signed) Tj ET
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 548 Tm (seven-bit 15-minute units with validity bit 7. ValidDataLength <= DataLength; return zeroes from valid end) Tj ET
-BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 532 Tm (to logical end, never stale data. Empty stream has zero first cluster. NoFatChain flag bit1;) Tj ET
-BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 516 Tm (AllocationPossible bit0. Check ceil\(DataLength/cluster_bytes\) before contiguous range arithmetic or chain) Tj ET
-BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 500 Tm (walk.) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 532 Tm (to logical end, never stale data. For a NoFatChain stream of zero length the first cluster must be zero;) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 516 Tm (apply all other stream rules according to section 6.3/6.4. NoFatChain flag bit1; AllocationPossible bit0.) Tj ET
+BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 500 Tm (Check ceil\(DataLength/cluster_bytes\) before contiguous range arithmetic or chain walk.) Tj ET
 endstream
 endobj
 46 0 obj
@@ -672,20 +679,20 @@ xref
 0000033464 00000 n 
 0000037173 00000 n 
 0000037321 00000 n 
-0000039192 00000 n 
-0000039340 00000 n 
-0000041546 00000 n 
-0000041694 00000 n 
-0000043869 00000 n 
-0000044017 00000 n 
-0000046166 00000 n 
-0000046314 00000 n 
-0000048651 00000 n 
-0000048799 00000 n 
-0000050983 00000 n 
-0000051131 00000 n 
+0000039283 00000 n 
+0000039431 00000 n 
+0000041968 00000 n 
+0000042116 00000 n 
+0000044656 00000 n 
+0000044804 00000 n 
+0000047281 00000 n 
+0000047429 00000 n 
+0000049859 00000 n 
+0000050007 00000 n 
+0000052191 00000 n 
+0000052339 00000 n 
 trailer
 << /Size 50 /Root 1 0 R >>
 startxref
-52695
+53903
 %%EOF
