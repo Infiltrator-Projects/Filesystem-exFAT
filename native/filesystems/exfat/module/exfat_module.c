@@ -8,6 +8,7 @@
 #include "../../../portable/fatfs/fatfs_module.c"
 
 #include "exfat_api.h"
+#include <string.h>
 #include <infiltratr/filesystem_module_v2.h>
 
 /* Preserve the native FatFs failure category at the Common V2 boundary.
