@@ -55,7 +55,7 @@ jobs:
           bash tests/read-firmware-media.sh build/exfat-firmware-test build/unified/firmware/exFAT.so \
             "$work/bad-layout.img" --reject-corrupt
           (cd "$work" && sha256sum -c before.sha256)
-      - name: Create portable DEB and source-embedded RUN without a kernel module
+      - name: Create portable DEB and source-first RUN without a kernel module
         run: |
           set -euo pipefail
           python3 standalone/release.py release
@@ -68,7 +68,7 @@ jobs:
           test "$(find build/package-root -type f | wc -l)" -eq 2
           packaged=build/package-root/System/Filesystems/exFAT.so
           work="$RUNNER_TEMP/exfat-boot-fixture"
-          # Portable and source-embedded builds intentionally use different
+          # Portable and source-first builds intentionally use different
           # optimizations, so equality of their entire ELF bytes is NOT an ABI test.
           # Validate the exact binary that actually goes into the DEB.
           readelf -S "$packaged" | grep -F '.infiltrator_boot'
@@ -80,17 +80,22 @@ jobs:
           ! nm -a "$packaged" | grep -E 'ifs_bind_services|ifs_unbind_services|ifs_exfat_worker_main|infiltrator_filesystem_.*_v1'
           ! readelf -d "$packaged" | grep -E 'libcrypto\.so|libsqlite3\.so'
           ! find build/package-root -name '*.ko' | grep .
-      - name: Verify source-embedded native RUN and its exact filesystem package
+      - name: Verify source-first native RUN and its exact filesystem package
         shell: bash
         run: |
           set -euo pipefail
           version=$(tr -d '\r\n' < VERSION)
           native="$RUNNER_TEMP/exfat-native-v2"
-          bash "dist/filesystem-exfat-$version-native-installer.run" \
+          run_file="dist/filesystem-exfat-$version-native-installer.run"
+          test "$(wc -c < "$run_file")" -lt 8192
+          ! grep -aF '__IFS_SOURCE_PAYLOAD_BELOW__' "$run_file"
+          grep -F "$GITHUB_SHA" "$run_file"
+          bash "$run_file" \
             --profile aggressive --system-package-mode --build-only \
             --output "$native"
           deb="$native/infiltrator-filesystem-exfat_$version+native1_amd64.deb"
           test -s "$deb"
+          test "$(dpkg-deb -f "$deb" X-Infiltrator-Source-Revision)" = "$GITHUB_SHA"
           test "$(dpkg-deb -f "$deb" X-Infiltrator-Native-Profile)" = aggressive
           mkdir -p "$native/extracted"
           dpkg-deb -x "$deb" "$native/extracted"
@@ -153,7 +158,7 @@ jobs:
             fi
             exit 0
           fi
-          gh release create "$tag" "$deb" "$run" dist/SHA256SUMS.txt \
+          gh release create "$tag" "$deb" "$run" \
             --target "$GITHUB_SHA" \
             --title "exFAT Common V2 filesystem $version" \
             --notes "Independently qualified Common V2 exFAT.so in portable DEB and CPU-native RUN. Hosted and freestanding source-owned reader checks include valid and corrupt exFAT media without mutation. No production BOOT/OVMF integration claim, V1 runtime or kernel driver. Historical defragmenter code is retained for separately qualified V2 migration."
