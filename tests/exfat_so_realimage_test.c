@@ -194,6 +194,16 @@ int main(int argc,char **argv) {
                 return fail("exFAT provider extent does not identify native payload");
             logical+=e.length;++first;
         }
+        const char *dirs[]={"/","/TESTDIR","/TESTDIR/CHILD"};
+        for(unsigned j=0u;j<sizeof dirs/sizeof dirs[0];++j) {
+            IfsFsExtentV2 e={0};
+            uint32_t got=0u;
+            if(map->map(mounted,dirs[j],0u,&e,1u,&got)!=IFS_FS_OK ||
+               got!=1u || e.logical_offset || e.length!=info.block_bytes ||
+               e.physical_offset>d.size || e.length>d.size-e.physical_offset ||
+               map->map(mounted,dirs[j],1u,&e,1u,&got)!=IFS_FS_END || got)
+                return fail("exFAT physical directory allocation and terminal page");
+        }
         if(d.writes!=writes)return fail("exFAT read-only extent mapping wrote media");
     }
     /* Inject an actual host I/O failure after a successful mount. Missing

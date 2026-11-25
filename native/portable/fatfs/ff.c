@@ -1246,6 +1246,14 @@ static DWORD get_fat (		/* 0xFFFFFFFF:Disk error, 1:Internal error, 2..0x7FFFFFF
 	return val;
 }
 
+#if FF_FS_EXFAT
+/* Private native chain reader for the Common V2 exFAT provider. */
+DWORD ifs_exfat_native_next_cluster(FFOBJID *object,DWORD cluster)
+{
+    return get_fat(object,cluster);
+}
+#endif
+
 
 
 
