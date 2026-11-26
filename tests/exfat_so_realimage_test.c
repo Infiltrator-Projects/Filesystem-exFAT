@@ -122,7 +122,8 @@ int main(int argc,char **argv) {
        api->group_mask !=
            (IFS_FS_GROUP_BIT(IFS_FS_GROUP_CORE)|
             IFS_FS_GROUP_BIT(IFS_FS_GROUP_VOLUME)|
-            IFS_FS_GROUP_BIT(IFS_FS_GROUP_DEFRAG)|IFS_FS_GROUP_BIT(IFS_FS_GROUP_ALLOCATION)) ||
+            IFS_FS_GROUP_BIT(IFS_FS_GROUP_DEFRAG)|IFS_FS_GROUP_BIT(IFS_FS_GROUP_ALLOCATION)|
+            IFS_FS_GROUP_BIT(IFS_FS_GROUP_FORMAT_PROFILE)) ||
        (api->runtime_profiles & (IFS_FS_PROFILE_KERNEL|IFS_FS_PROFILE_FIRMWARE)))
         return fail("strict V2 descriptor not qualified");
     const IfsFsCoreOpsV2 *core =
@@ -138,6 +139,16 @@ int main(int argc,char **argv) {
           IFS_FS_VOLUME_LABEL_GET|IFS_FS_VOLUME_LABEL_SET|IFS_FS_VOLUME_CHECK) || !vol->label || !vol->set_label || !vol->check || vol->repair)
         return fail("native CORE or VOLUME capabilities incorrect");
 
+    const IfsFsFormatProfileOpsV2 *profiles=(const void*)ifs_fs_group_v2(api,IFS_FS_GROUP_FORMAT_PROFILE);
+    IfsFsFormatProfileV2 profile={.structure_bytes=sizeof(profile)};
+    if(!profiles || !profiles->get_default ||
+       profiles->header.capabilities!=IFS_FS_FORMAT_PROFILE_DEFAULT ||
+       profiles->get_default(NULL)!=IFS_FS_INVALID ||
+       profiles->get_default(&profile)!=IFS_FS_OK ||
+       !ifs_fs_format_profile_v2_valid(&profile) ||
+       profile.layout!=IFS_FS_LAYOUT_MULTI_EXTENT ||
+       profile.flags!=IFS_FS_FORMAT_REQUIRE_CHECK)
+        return fail("native format profile invalid");
     Image d;
     if(open_image(&d,argv[3]))return fail("cannot open foreign FAT32 fixture");
     IfsFsHostRuntimeV2 host=host_for(&d,0);
@@ -515,6 +526,23 @@ int main(int argc,char **argv) {
        core->write(mounted,"/FOURK.BIN",0u,data,sizeof(data))!=IFS_FS_OK ||
        core->unmount(mounted)!=IFS_FS_OK)
         return fail("4 KiB-sector V2 mount or write");
+    /* Exercise the reported default geometry, not just the smaller
+     * independently generated 128 MiB fixture above. */
+    if(d.size!=profile.minimum_bytes ||
+       ftruncate(d.fd,(off_t)profile.recommended_bytes)!=0)
+        return fail("disposable format-profile geometry");
+    d.size=profile.recommended_bytes;
+    host=host_for(&d,1);
+    host.logical_sector_bytes=host.physical_sector_bytes=d.sector;
+    mounted=NULL;info.structure_bytes=sizeof(info);
+    if(vol->format(&host,profile.format_variant,NULL,0u)!=IFS_FS_OK ||
+       core->probe(&host,&variant)!=IFS_FS_OK || variant!=profile.probe_variant ||
+       core->mount(&host,&mounted,&info)!=IFS_FS_OK ||
+       core->create(mounted,"/PROFILE.BIN",IFS_FS_ENTRY_FILE)!=IFS_FS_OK ||
+       core->write(mounted,"/PROFILE.BIN",0u,data,sizeof(data))!=IFS_FS_OK ||
+       vol->check(mounted,0u,&errors)!=IFS_FS_OK || errors ||
+       core->unmount(mounted)!=IFS_FS_OK)
+        return fail("reported format geometry failed native roundtrip");
     if(close(d.fd)!=0 || dlclose(library)!=0)
         return fail("resource cleanup");
     puts("EXFAT-COMMON-V2-REALIMAGE-ROUNDTRIP-PASS");

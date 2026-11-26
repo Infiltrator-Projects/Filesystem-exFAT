@@ -660,9 +660,12 @@ static int default_format_profile(IfsFsFormatProfileV2 *p)
         .structure_bytes=sizeof(*p), .flags=IFS_FS_FORMAT_REQUIRE_CHECK,
         .format_variant=64u, .probe_variant=64u,
         .layout=IFS_FS_LAYOUT_MULTI_EXTENT,
-        .minimum_bytes=2048ull*1024u*1024u,
+        /* 128 MiB is the existing real-media qualification floor;
+         * 2 GiB is a recommended corpus size, not an on-disk limit.
+         * No upper limit is declared until the native geometry is tested. */
+        .minimum_bytes=128ull*1024u*1024u,
         .recommended_bytes=2048ull*1024u*1024u,
-        .maximum_bytes=2048ull*1024u*1024u
+        .maximum_bytes=0u
     };
     return IFS_FS_OK;
 }
