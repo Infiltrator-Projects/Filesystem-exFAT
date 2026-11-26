@@ -12,10 +12,22 @@ int main(void)
         v2->runtime_profiles!=IFS_FS_PROFILE_HOSTED ||
         v2->group_mask!=(IFS_FS_GROUP_BIT(IFS_FS_GROUP_CORE)|
                          IFS_FS_GROUP_BIT(IFS_FS_GROUP_VOLUME)|
-                         IFS_FS_GROUP_BIT(IFS_FS_GROUP_DEFRAG)|IFS_FS_GROUP_BIT(IFS_FS_GROUP_ALLOCATION))) {
+                         IFS_FS_GROUP_BIT(IFS_FS_GROUP_DEFRAG)|IFS_FS_GROUP_BIT(IFS_FS_GROUP_ALLOCATION)|
+                         IFS_FS_GROUP_BIT(IFS_FS_GROUP_FORMAT_PROFILE))) {
         fputs("Native exFAT Common V2 descriptor invalid\n",stderr);
         return 1;
     }
+    const IfsFsFormatProfileOpsV2 *profile=(const IfsFsFormatProfileOpsV2 *)
+        ifs_fs_group_v2(v2,IFS_FS_GROUP_FORMAT_PROFILE);
+    IfsFsFormatProfileV2 defaults={.structure_bytes=sizeof(defaults)};
+    if(!profile || !profile->get_default ||
+       profile->get_default(NULL)!=IFS_FS_INVALID ||
+       profile->get_default(&defaults)!=IFS_FS_OK ||
+       !ifs_fs_format_profile_v2_valid(&defaults) ||
+       defaults.format_variant!=64u || defaults.probe_variant!=64u ||
+       defaults.layout!=IFS_FS_LAYOUT_MULTI_EXTENT ||
+       defaults.recommended_bytes!=2048ull*1024u*1024u ||
+       defaults.flags!=IFS_FS_FORMAT_REQUIRE_CHECK)return 1;
     const IfsFsCoreOpsV2 *core=
         (const IfsFsCoreOpsV2 *)ifs_fs_group_v2(v2,IFS_FS_GROUP_CORE);
     const IfsFsVolumeOpsV2 *volume=
