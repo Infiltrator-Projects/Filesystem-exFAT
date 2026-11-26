@@ -512,6 +512,30 @@ int main(int argc,char **argv) {
     host=host_for(&d,0);
     if(vol->format(&host,64u,NULL,0u)!=IFS_FS_ACCESS)
         return fail("read-only format incorrectly permitted");
+    /* Exercise the reported default geometry, not just the smaller
+     * independently generated 128 MiB fixture above. */
+    const uint64_t original_size=d.size;
+    if(d.size<profile.minimum_bytes ||
+       ftruncate(d.fd,(off_t)profile.recommended_bytes)!=0)
+        return fail("disposable format-profile geometry");
+    d.size=profile.recommended_bytes;
+    d.sector=4096u;
+    host=host_for(&d,1);
+    host.logical_sector_bytes=host.physical_sector_bytes=d.sector;
+    mounted=NULL;info.structure_bytes=sizeof(info);
+    if(vol->format(&host,profile.format_variant,NULL,0u)!=IFS_FS_OK ||
+       core->probe(&host,&variant)!=IFS_FS_OK || variant!=profile.probe_variant ||
+       core->mount(&host,&mounted,&info)!=IFS_FS_OK ||
+       core->create(mounted,"/PROFILE.BIN",IFS_FS_ENTRY_FILE)!=IFS_FS_OK ||
+       core->write(mounted,"/PROFILE.BIN",0u,data,sizeof(data))!=IFS_FS_OK ||
+       vol->check(mounted,0u,&errors)!=IFS_FS_OK || errors ||
+       core->unmount(mounted)!=IFS_FS_OK)
+        return fail("reported format geometry failed native roundtrip");
+    /* Leave the original-size, independently expected FOURK.BIN fixture
+     * to the existing firmware and packaged-binary tests below. */
+    if(ftruncate(d.fd,(off_t)original_size)!=0)
+        return fail("restore firmware fixture geometry");
+    d.size=original_size;
     /* Reformat the disposable image with a strict 4 KiB-sector host. Both
      * callback alignment and real mount/write are checked, not just a probe. */
     d.sector=4096u;
@@ -526,23 +550,6 @@ int main(int argc,char **argv) {
        core->write(mounted,"/FOURK.BIN",0u,data,sizeof(data))!=IFS_FS_OK ||
        core->unmount(mounted)!=IFS_FS_OK)
         return fail("4 KiB-sector V2 mount or write");
-    /* Exercise the reported default geometry, not just the smaller
-     * independently generated 128 MiB fixture above. */
-    if(d.size!=profile.minimum_bytes ||
-       ftruncate(d.fd,(off_t)profile.recommended_bytes)!=0)
-        return fail("disposable format-profile geometry");
-    d.size=profile.recommended_bytes;
-    host=host_for(&d,1);
-    host.logical_sector_bytes=host.physical_sector_bytes=d.sector;
-    mounted=NULL;info.structure_bytes=sizeof(info);
-    if(vol->format(&host,profile.format_variant,NULL,0u)!=IFS_FS_OK ||
-       core->probe(&host,&variant)!=IFS_FS_OK || variant!=profile.probe_variant ||
-       core->mount(&host,&mounted,&info)!=IFS_FS_OK ||
-       core->create(mounted,"/PROFILE.BIN",IFS_FS_ENTRY_FILE)!=IFS_FS_OK ||
-       core->write(mounted,"/PROFILE.BIN",0u,data,sizeof(data))!=IFS_FS_OK ||
-       vol->check(mounted,0u,&errors)!=IFS_FS_OK || errors ||
-       core->unmount(mounted)!=IFS_FS_OK)
-        return fail("reported format geometry failed native roundtrip");
     if(close(d.fd)!=0 || dlclose(library)!=0)
         return fail("resource cleanup");
     puts("EXFAT-COMMON-V2-REALIMAGE-ROUNDTRIP-PASS");
