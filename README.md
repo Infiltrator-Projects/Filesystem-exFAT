@@ -29,9 +29,11 @@ The target installation is `/System/Filesystems/exFAT.so` and `/System/Resources
 - [Provider implementation](module/exfat_common.c)
 - [Native design or source provenance](native/filesystems/exfat/DESIGN.md)
 - [Migration and source history](docs/RELEASE_SCOPE.md)
-- [Original-format reference source](docs/exFAT.pages) and [PDF](docs/exFAT.pdf)
+- [Original-format reference source](docs/exFAT.pdfstreams) and [PDF](docs/exFAT.pdf)
 - [Field-level original-format specification supplement](docs/FORMAT_SPECIFICATION.md)
 - [Project philosophy](docs/PHILOSOPHY.md)
 - [Common ABI](https://github.com/Infiltrator-Projects/Libraries)
 
 The original-format reference and historical migration notes describe different evidence from the current production provider. When descriptions disagree, the current exported descriptor, implementation, executable tests and exact-revision release evidence take precedence.
+
+The [engineering reference](docs/exFAT-TECHNICAL-REFERENCE.md) integrates the original-format specification and worked exercises; earlier illustrated material is preserved in the PDF.

@@ -3,7 +3,7 @@
 << /Type /Catalog /Pages 2 0 R >>
 endobj
 2 0 obj
-<< /Type /Pages /Kids [6 0 R 8 0 R 10 0 R 12 0 R 14 0 R 16 0 R 18 0 R 20 0 R 22 0 R 24 0 R 26 0 R 28 0 R 30 0 R 32 0 R 34 0 R 36 0 R 38 0 R 40 0 R 42 0 R 44 0 R 46 0 R 48 0 R] /Count 22 >>
+<< /Type /Pages /Kids [6 0 R 8 0 R 10 0 R 12 0 R 14 0 R 16 0 R 18 0 R 20 0 R 22 0 R 24 0 R 26 0 R 28 0 R 30 0 R 32 0 R 34 0 R 36 0 R 38 0 R 40 0 R 42 0 R 44 0 R 46 0 R 48 0 R 50 0 R 52 0 R 54 0 R 56 0 R 58 0 R 60 0 R 62 0 R 64 0 R 66 0 R 68 0 R 70 0 R] /Count 33 >>
 endobj
 3 0 obj
 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
@@ -18,6 +18,310 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 7 0 R >>
 endobj
 7 0 obj
+<< /Length 1315 >>
+stream
+0.05 0.13 0.22 rg 0 749 595 93 re f
+0.01 0.52 0.56 rg 50 747 116 5 re f
+1 1 1 rg BT /F2 11 Tf 50 807 Td (INFILTRATOR / FILESYSTEM ENGINEERING REFERENCE) Tj ET
+BT /F2 21 Tf 50 775 Td (exFAT - technical reference) Tj ET
+0.05 0.13 0.22 rg BT /F2 14 Tf 50 715 Td (Origin, scope and non-compatible derivatives) Tj ET
+BT /F1 11 Tf 15 TL 50 685 Td
+(Microsoft introduced exFAT with Windows Embedded CE 6.0 in November 2006;) Tj
+T* (Vista SP1 and Windows XP updates expanded deployment. SDXC uses exFAT for) Tj
+T* (portable large media. Reverse-engineering work appeared around 2010;) Tj
+T* (Microsoft published the exFAT specification in August 2019. It is not a) Tj
+T* (FAT32 extension using the old BPB or directory entry. MBR type 0x07 and GPT) Tj
+T* (basic data GUID EBD0A0A2-B9E5-4433-87C0-68B6B72699C7 are not unique) Tj
+T* (identifications; inspect the actual boot structure. The 64-bit file-length) Tj
+T* (field is not permission to exceed the volume, cluster heap or implementation) Tj
+T* (limits. TexFAT is a distinct transactional extension; baseline exFAT must) Tj
+T* (not claim TexFAT semantics or ordinary FAT32+ support. FATX, Turbo FAT and) Tj
+T* (classic VFAT are not exFAT profiles.) Tj
+ET
+0.05 0.13 0.22 rg BT /F1 9 Tf 50 42 Td (Engineering chapter 1 | Original format, not provider qualification) Tj ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 9 0 R >>
+endobj
+9 0 obj
+<< /Length 1753 >>
+stream
+0.05 0.13 0.22 rg 0 749 595 93 re f
+0.01 0.52 0.56 rg 50 747 116 5 re f
+1 1 1 rg BT /F2 11 Tf 50 807 Td (INFILTRATOR / FILESYSTEM ENGINEERING REFERENCE) Tj ET
+BT /F2 21 Tf 50 775 Td (exFAT - technical reference) Tj ET
+0.05 0.13 0.22 rg BT /F2 14 Tf 50 715 Td (Boot sector and regions - exact byte offsets) Tj ET
+BT /F1 11 Tf 15 TL 50 685 Td
+(All multibyte fields are little-endian. Offset:size: 0:3 JumpBoot \(EB 76) Tj
+T* (90\); 3:8 FileSystemName \(EXFAT followed by three spaces\); 11:53 MustBeZero;) Tj
+T* (64:8 PartitionOffset; 72:8 VolumeLength; 80:4 FatOffset; 84:4 FatLength;) Tj
+T* (88:4 ClusterHeapOffset; 92:4 ClusterCount; 96:4 FirstClusterOfRootDirectory;) Tj
+T* (100:4 VolumeSerialNumber; 104:2 FileSystemRevision; 106:2 VolumeFlags; 108:1) Tj
+T* (BytesPerSectorShift; 109:1 SectorsPerClusterShift; 110:1 NumberOfFats; 111:1) Tj
+T* (DriveSelect; 112:1 PercentInUse; 113:7 reserved; 120:390 BootCode; 510:2) Tj
+T* (BootSignature \(55 AA\); bytes after 512, if present, have undefined contents.) Tj
+T* (Main region sectors 0..11, backup 12..23; each contains boot, eight extended) Tj
+T* (boot sectors, OEM parameters, reserved sector and checksum sector. Sector) Tj
+T* (size 2^shift \(512..4096\); cluster size 2^\(both shifts\), at most 32 MiB.) Tj
+T* (FatOffset >= 24; FatLength >= ceil\(4*\(ClusterCount+2\)/sector_bytes\);) Tj
+T* (ClusterHeapOffset >= FatOffset + NumberOfFats*FatLength. VolumeLength >= 1) Tj
+T* (MiB in sectors; revision 1.00 uses major 1 and minor 0. Check FAT and heap) Tj
+T* (extents against declared volume and host bounds; cluster n maps to) Tj
+T* (heap_offset + \(n-2\)*sectors_per_cluster.) Tj
+ET
+0.05 0.13 0.22 rg BT /F1 9 Tf 50 42 Td (Engineering chapter 2 | Original format, not provider qualification) Tj ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 11 0 R >>
+endobj
+11 0 obj
+<< /Length 1764 >>
+stream
+0.05 0.13 0.22 rg 0 749 595 93 re f
+0.01 0.52 0.56 rg 50 747 116 5 re f
+1 1 1 rg BT /F2 11 Tf 50 807 Td (INFILTRATOR / FILESYSTEM ENGINEERING REFERENCE) Tj ET
+BT /F2 21 Tf 50 775 Td (exFAT - technical reference) Tj ET
+0.05 0.13 0.22 rg BT /F2 14 Tf 50 715 Td (Boot integrity and allocation) Tj ET
+BT /F1 11 Tf 15 TL 50 685 Td
+(Boot checksum starts at zero; for every byte in first 11 sectors of its) Tj
+T* (region rotate right 1 bit in 32 bits and add byte modulo 2^32; skip bytes) Tj
+T* (106,107,112 of boot sector. The checksum sector contains repeated LE32) Tj
+T* (checksum words. Validate each copy independently. Backup flags and) Tj
+T* (PercentInUse are stale. VolumeFlags bits 0 ActiveFat, 1 VolumeDirty, 2) Tj
+T* (MediaFailure, 3 ClearToZero; preserve reserved bits per revision. Allocation) Tj
+T* (bitmap bit n-2 \(LSB-first\) identifies cluster n. FAT[0]=0xFFFFFFF8,) Tj
+T* (FAT[1]=0xFFFFFFFF; normal successor 2..ClusterCount+1, bad=0xFFFFFFF7,) Tj
+T* (EOC=0xFFFFFFFF. NoFatChain streams use a contiguous range, FAT is required) Tj
+T* (for root directory; bitmap is allocation authority. Check both range and) Tj
+T* (bitmap ownership. If two FATs exist, use the active FAT/bitmap pair;) Tj
+T* (inactive FAT is stale, not an automatic mirror. Only TexFAT-aware) Tj
+T* (implementations switch active pairs. ClearToZero must be cleared before) Tj
+T* (mutation. Maximum cluster count 2^32-11, subject to heap and volume size;) Tj
+T* (Microsoft recommends at most 2^24-2 clusters. Minimum heap is 2+NumberOfFats) Tj
+T* (clusters. Maximum directory storage is 256 MiB \(8,388,608 records\).) Tj
+T* (PercentInUse is a hint, 0xFF unknown.) Tj
+ET
+0.05 0.13 0.22 rg BT /F1 9 Tf 50 42 Td (Engineering chapter 3 | Original format, not provider qualification) Tj ET
+endstream
+endobj
+12 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 13 0 R >>
+endobj
+13 0 obj
+<< /Length 1752 >>
+stream
+0.05 0.13 0.22 rg 0 749 595 93 re f
+0.01 0.52 0.56 rg 50 747 116 5 re f
+1 1 1 rg BT /F2 11 Tf 50 807 Td (INFILTRATOR / FILESYSTEM ENGINEERING REFERENCE) Tj ET
+BT /F2 21 Tf 50 775 Td (exFAT - technical reference) Tj ET
+0.05 0.13 0.22 rg BT /F2 14 Tf 50 715 Td (Directory-entry types and byte fields) Tj ET
+BT /F1 11 Tf 15 TL 50 685 Td
+(Each record is 32 bytes. EntryType 0=end, 0x80 invalid, bit7 InUse, bit6) Tj
+T* (secondary, bit5 benign. Allocation Bitmap 0x81: flags at 1, first cluster at) Tj
+T* (20 \(4\), length at 24 \(8\). Up-case Table 0x82: checksum at 4 \(4\), cluster at) Tj
+T* (20, length at 24. Volume Label 0x83: length at 1, 11 UTF-16 units at 2. File) Tj
+T* (0x85: secondary count at 1, set checksum at 2 \(2\), attributes at 4 \(2\),) Tj
+T* (created/modified/accessed timestamps at 8/12/16 \(4 each\), create/modify 10ms) Tj
+T* (at 20/21, UTC offsets at 22/23/24. Stream Extension 0xC0: flags at 1, name) Tj
+T* (length at 3, name hash at 4 \(2\), ValidDataLength at 8 \(8\), first cluster at) Tj
+T* (20 \(4\), DataLength at 24 \(8\). File Name 0xC1: flags at 1, 15 UTF-16 units at) Tj
+T* (2. Validate set order, counts and exact checksum before use; unknown) Tj
+T* (critical primary types require refusal and unknown critical secondary types) Tj
+T* (constrain permitted access to the affected set. This project may) Tj
+T* (conservatively refuse it; Microsoft section 8.2 permits limited enumeration,) Tj
+T* (traversal and deletion under specific conditions. Preserve unknown benign) Tj
+T* (entries and their allocation; refuse mutations not fully qualified. No) Tj
+T* (short-name alias and no VFAT 0x0F records.) Tj
+ET
+0.05 0.13 0.22 rg BT /F1 9 Tf 50 42 Td (Engineering chapter 4 | Original format, not provider qualification) Tj ET
+endstream
+endobj
+14 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 15 0 R >>
+endobj
+15 0 obj
+<< /Length 1705 >>
+stream
+0.05 0.13 0.22 rg 0 749 595 93 re f
+0.01 0.52 0.56 rg 50 747 116 5 re f
+1 1 1 rg BT /F2 11 Tf 50 807 Td (INFILTRATOR / FILESYSTEM ENGINEERING REFERENCE) Tj ET
+BT /F2 21 Tf 50 775 Td (exFAT - technical reference) Tj ET
+0.05 0.13 0.22 rg BT /F2 14 Tf 50 715 Td (Name, time, length and checksum algorithms) Tj ET
+BT /F1 11 Tf 15 TL 50 685 Td
+(Set checksum: rotate a 16-bit accumulator right one and add each byte of all) Tj
+T* (records, omitting bytes 2 and 3 in the primary record. Name hash uses the) Tj
+T* (same 16-bit rotate/add on little-endian bytes of the name after mapping) Tj
+T* (UTF-16 code units through the volume up-case table; hash alone does not) Tj
+T* (prove equality. Up-case checksum uses 32-bit rotate/add over its stored) Tj
+T* (bytes. Validate compressed table runs, exact length and mapping; preserve) Tj
+T* (case in filenames and compare via the table. Filename length is 1..255) Tj
+T* (UTF-16 code units, with ceil\(length/15\) name entries. FAT-style 32-bit) Tj
+T* (timestamps encode seconds/2, minute, hour, day, month, year since 1980;) Tj
+T* (create/modify 10ms increments 0..199. UTC offset is signed seven-bit) Tj
+T* (15-minute units with validity bit 7. ValidDataLength <= DataLength; return) Tj
+T* (zeroes from valid end to logical end, never stale data. For a NoFatChain) Tj
+T* (stream of zero length the first cluster must be zero; apply all other stream) Tj
+T* (rules according to section 6.3/6.4. NoFatChain flag bit1; AllocationPossible) Tj
+T* (bit0. Check ceil\(DataLength/cluster_bytes\) before contiguous range) Tj
+T* (arithmetic or chain walk.) Tj
+ET
+0.05 0.13 0.22 rg BT /F1 9 Tf 50 42 Td (Engineering chapter 5 | Original format, not provider qualification) Tj ET
+endstream
+endobj
+16 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 17 0 R >>
+endobj
+17 0 obj
+<< /Length 1502 >>
+stream
+0.05 0.13 0.22 rg 0 749 595 93 re f
+0.01 0.52 0.56 rg 50 747 116 5 re f
+1 1 1 rg BT /F2 11 Tf 50 807 Td (INFILTRATOR / FILESYSTEM ENGINEERING REFERENCE) Tj ET
+BT /F2 21 Tf 50 775 Td (exFAT - technical reference) Tj ET
+0.05 0.13 0.22 rg BT /F2 14 Tf 50 715 Td (Mutation, recovery and external compatibility) Tj ET
+BT /F1 11 Tf 15 TL 50 685 Td
+(Use the specification's update ordering and flush requirements; for) Tj
+T* (allocation, set dirty, update FAT if needed, update bitmap, publish) Tj
+T* (directory set and clear dirty only when consistent; freeing must avoid) Tj
+T* (dangling references. A complete data write also requires data before) Tj
+T* (publishing the valid-data boundary. Compare exact bytes, allocation bitmap) Tj
+T* (ownership, entry checksums and name hash after write. A dirty or) Tj
+T* (media-failure flag is not a journal; unknown transaction state requires) Tj
+T* (fail-closed policy. Test 512/1024/2048/4096-byte sector geometry, malformed) Tj
+T* (boot checksums, truncated sets, mismatched up-case checksums,) Tj
+T* (contiguous-to-fragmented conversion, cross-links, zero-length streams, VDL) Tj
+T* (tail zeroing, missing bitmap and active FAT selection. Ordinary exFAT has no) Tj
+T* (native VFAT names, FSInfo, OS/2 EA convention, classic FAT+ encoding or) Tj
+T* (general ACL/journal; optional extensions need independent specification and) Tj
+T* (tests.) Tj
+ET
+0.05 0.13 0.22 rg BT /F1 9 Tf 50 42 Td (Engineering chapter 6 | Original format, not provider qualification) Tj ET
+endstream
+endobj
+18 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 19 0 R >>
+endobj
+19 0 obj
+<< /Length 1070 >>
+stream
+0.05 0.13 0.22 rg 0 749 595 93 re f
+0.01 0.52 0.56 rg 50 747 116 5 re f
+1 1 1 rg BT /F2 11 Tf 50 807 Td (INFILTRATOR / FILESYSTEM ENGINEERING REFERENCE) Tj ET
+BT /F2 21 Tf 50 775 Td (exFAT - technical reference) Tj ET
+0.05 0.13 0.22 rg BT /F2 14 Tf 50 715 Td (Primary source and implementation boundary) Tj ET
+BT /F1 11 Tf 15 TL 50 685 Td
+(Microsoft exFAT File System Specification, revision 1.00,) Tj
+T* (https://learn.microsoft.com/en-us/windows/win32/fileio/exfat-specification ;) Tj
+T* (user-supplied historical File Allocation Table reference \(Wikipedia, CC) Tj
+T* (BY-SA\), https://en.wikipedia.org/wiki/File_Allocation_Table . Field-level) Tj
+T* (rules here are a compact reference to the specification, not its) Tj
+T* (replacement. Provider support is established only by exact Common V2 source,) Tj
+T* (executable tests and packaged binary. No new operation, build, installer or) Tj
+T* (release is claimed by these documentation changes.) Tj
+ET
+0.05 0.13 0.22 rg BT /F1 9 Tf 50 42 Td (Engineering chapter 7 | Original format, not provider qualification) Tj ET
+endstream
+endobj
+20 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 21 0 R >>
+endobj
+21 0 obj
+<< /Length 1109 >>
+stream
+0.05 0.13 0.22 rg 0 749 595 93 re f
+0.01 0.52 0.56 rg 50 747 116 5 re f
+1 1 1 rg BT /F2 11 Tf 50 807 Td (INFILTRATOR / FILESYSTEM ENGINEERING REFERENCE) Tj ET
+BT /F2 21 Tf 50 775 Td (exFAT - technical reference) Tj ET
+0.05 0.13 0.22 rg BT /F2 14 Tf 50 715 Td (Worked stream mapping) Tj ET
+BT /F1 11 Tf 15 TL 50 685 Td
+(With 512-byte sectors, eight sectors per cluster and heap start 2048,) Tj
+T* (cluster 100 starts at sector 2832. A 10000-byte ordinary stream with) Tj
+T* (NoFatChain set uses three consecutive clusters 100..102, all marked in the) Tj
+T* (active allocation bitmap. FAT entries are not authoritative for such a) Tj
+T* (stream. Without NoFatChain, follow the FAT and reconcile each cluster with) Tj
+T* (the bitmap. Return zeros beyond ValidDataLength within DataLength. When) Tj
+T* (extending a contiguous file into nonadjacent space, build the complete FAT) Tj
+T* (chain before publishing the cleared NoFatChain bit. Check for overflow and) Tj
+T* (allocation conflicts.) Tj
+ET
+0.05 0.13 0.22 rg BT /F1 9 Tf 50 42 Td (Engineering chapter 8 | Original format, not provider qualification) Tj ET
+endstream
+endobj
+22 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 23 0 R >>
+endobj
+23 0 obj
+<< /Length 1140 >>
+stream
+0.05 0.13 0.22 rg 0 749 595 93 re f
+0.01 0.52 0.56 rg 50 747 116 5 re f
+1 1 1 rg BT /F2 11 Tf 50 807 Td (INFILTRATOR / FILESYSTEM ENGINEERING REFERENCE) Tj ET
+BT /F2 21 Tf 50 775 Td (exFAT - technical reference) Tj ET
+0.05 0.13 0.22 rg BT /F2 14 Tf 50 715 Td (Directory set validation) Tj ET
+BT /F1 11 Tf 15 TL 50 685 Td
+(File entry 0x85 declares its secondary count; stream extension 0xC0) Tj
+T* (describes the flags, name length and hash, valid length, first cluster and) Tj
+T* (data length. Filename entries 0xC1 contain 15 UTF-16LE units each. A 31-unit) Tj
+T* (filename requires three filename entries. Verify the set checksum across all) Tj
+T* (records, excluding the primary checksum field, and the name hash using the) Tj
+T* (volume's verified upcase table. Match names after hash comparison. The high) Tj
+T* (entry-type bit marks in-use, bit 6 secondary, bit 5 benign. Preserve unknown) Tj
+T* (benign records; reject unsupported critical records. Never publish an) Tj
+T* (incomplete set as a complete object.) Tj
+ET
+0.05 0.13 0.22 rg BT /F1 9 Tf 50 42 Td (Engineering chapter 9 | Original format, not provider qualification) Tj ET
+endstream
+endobj
+24 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 25 0 R >>
+endobj
+25 0 obj
+<< /Length 1240 >>
+stream
+0.05 0.13 0.22 rg 0 749 595 93 re f
+0.01 0.52 0.56 rg 50 747 116 5 re f
+1 1 1 rg BT /F2 11 Tf 50 807 Td (INFILTRATOR / FILESYSTEM ENGINEERING REFERENCE) Tj ET
+BT /F2 21 Tf 50 775 Td (exFAT - technical reference) Tj ET
+0.05 0.13 0.22 rg BT /F2 14 Tf 50 715 Td (Mutation and recovery exercise) Tj ET
+BT /F1 11 Tf 15 TL 50 685 Td
+(Create independent fixtures with contiguous and chained streams, varying) Tj
+T* (valid lengths, fragmented root, different sector sizes and inactive records.) Tj
+T* (Reconstruct ownership from every active directory and special file, compare) Tj
+T* (with the active allocation bitmap and FAT where applicable. Reserve a) Tj
+T* (destination before relocation, verify bytes, publish the complete revised) Tj
+T* (entry set and mapping, then retire original ownership only after durable) Tj
+T* (publication. Native baseline exFAT does not provide TexFAT transaction) Tj
+T* (guarantees. Fault-inject around every bitmap, FAT and entry-set publication.) Tj
+T* (Verify with independent native tools on disposable copies. Unrecognised) Tj
+T* (entry types or ambiguous allocation must stop writes.) Tj
+ET
+0.05 0.13 0.22 rg BT /F1 9 Tf 50 42 Td (Engineering chapter 10 | Original format, not provider qualification) Tj ET
+endstream
+endobj
+26 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 27 0 R >>
+endobj
+27 0 obj
+<< /Length 591 >>
+stream
+0.05 0.13 0.22 rg 0 749 595 93 re f
+0.01 0.52 0.56 rg 50 747 116 5 re f
+1 1 1 rg BT /F2 11 Tf 50 807 Td (INFILTRATOR / FILESYSTEM ENGINEERING REFERENCE) Tj ET
+BT /F2 21 Tf 50 775 Td (exFAT - technical reference) Tj ET
+0.05 0.13 0.22 rg BT /F2 14 Tf 50 715 Td (Historical reference appendix) Tj ET
+BT /F1 11 Tf 15 TL 50 685 Td
+(The earlier illustrated manual follows for provenance; the integrated field) Tj
+T* (specification and worked examples above take precedence.) Tj
+ET
+0.05 0.13 0.22 rg BT /F1 9 Tf 50 42 Td (Engineering chapter 11 | Original format, not provider qualification) Tj ET
+endstream
+endobj
+28 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 29 0 R >>
+endobj
+29 0 obj
 << /Length 2929 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
@@ -56,10 +360,10 @@ BT /F1 10.5 Tf 0.09 0.16 0.24 rg 1 0 0 1 55 184.0 Tm (5. Design trade-offs and h
 BT /F1 10.5 Tf 0.09 0.16 0.24 rg 1 0 0 1 55 159.0 Tm (6. InfiltratorOS interpretation) Tj ET
 endstream
 endobj
-8 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 9 0 R >>
+30 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 31 0 R >>
 endobj
-9 0 obj
+31 0 obj
 << /Length 1860 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
@@ -81,10 +385,10 @@ BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 546.0 Tm (extensible metadata. exFAT
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 529.0 Tm (sets, allocation bitmap and upcase-table semantics require a distinct parser and writer.) Tj ET
 endstream
 endobj
-10 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 11 0 R >>
+32 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 33 0 R >>
 endobj
-11 0 obj
+33 0 obj
 << /Length 1994 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
@@ -107,10 +411,10 @@ BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 529.0 Tm (are allocated. Directory e
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 512.0 Tm (File Name secondary entries.) Tj ET
 endstream
 endobj
-12 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 13 0 R >>
+34 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 35 0 R >>
 endobj
-13 0 obj
+35 0 obj
 << /Length 1842 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
@@ -132,10 +436,10 @@ BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 546.0 Tm (valid-data length. Unknown
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 529.0 Tm (extensions.) Tj ET
 endstream
 endobj
-14 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 15 0 R >>
+36 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 37 0 R >>
 endobj
-15 0 obj
+37 0 obj
 << /Length 1943 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
@@ -158,10 +462,10 @@ BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 529.0 Tm (length and contiguous flag
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 512.0 Tm (unknown critical ones.) Tj ET
 endstream
 endobj
-16 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 17 0 R >>
+38 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 39 0 R >>
 endobj
-17 0 obj
+39 0 obj
 << /Length 1846 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
@@ -183,10 +487,10 @@ BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 546.0 Tm (under abrupt removal remai
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 529.0 Tm (utilities.) Tj ET
 endstream
 endobj
-18 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 19 0 R >>
+40 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 41 0 R >>
 endobj
-19 0 obj
+41 0 obj
 << /Length 2240 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
@@ -211,10 +515,10 @@ BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 443.0 Tm (The published shared objec
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 426.0 Tm (firmware profile. Common V2 relocation and recovery remain pending.) Tj ET
 endstream
 endobj
-20 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 21 0 R >>
+42 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 43 0 R >>
 endobj
-21 0 obj
+43 0 obj
 << /Length 2055 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
@@ -238,10 +542,10 @@ BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 464.0 Tm (documented above; claims a
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 51 447.0 Tm (and release evidence.) Tj ET
 endstream
 endobj
-22 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 23 0 R >>
+44 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 45 0 R >>
 endobj
-23 0 obj
+45 0 obj
 << /Length 1888 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
@@ -265,10 +569,10 @@ BT /F1 10 Tf 0.08 0.16 0.24 rg 1 0 0 1 57 420.0 Tm (7. File Entry set: primary, 
 BT /F1 10 Tf 0.08 0.16 0.24 rg 1 0 0 1 57 390.0 Tm (8. NoFatChain: contiguous stream allocation without FAT traversal.) Tj ET
 endstream
 endobj
-24 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 25 0 R >>
+46 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 47 0 R >>
 endobj
-25 0 obj
+47 0 obj
 << /Length 1716 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
@@ -290,10 +594,10 @@ BT /F1 10 Tf 0.08 0.16 0.24 rg 1 0 0 1 57 480.0 Tm (changes to the original on-d
 BT /F1 10 Tf 0.08 0.16 0.24 rg 1 0 0 1 57 462.0 Tm (assuming current software support defines historic media.) Tj ET
 endstream
 endobj
-26 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 27 0 R >>
+48 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 49 0 R >>
 endobj
-27 0 obj
+49 0 obj
 << /Length 1884 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
@@ -317,10 +621,10 @@ BT /F1 10 Tf 0.08 0.16 0.24 rg 1 0 0 1 57 432.0 Tm (report conflicting evidence 
 BT /F1 10 Tf 0.08 0.16 0.24 rg 1 0 0 1 57 414.0 Tm (state.) Tj ET
 endstream
 endobj
-28 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 29 0 R >>
+50 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 51 0 R >>
 endobj
-29 0 obj
+51 0 obj
 << /Length 2673 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
@@ -349,10 +653,10 @@ BT /F1 10 Tf 0.09 0.16 0.24 rg 1 0 0 1 55 377 Tm (8. Translate cluster number tw
 BT /F1 10 Tf 0.09 0.16 0.24 rg 1 0 0 1 55 360.5 Tm (sectors-per-cluster and the volume boundaries from the boot record.) Tj ET
 endstream
 endobj
-30 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 31 0 R >>
+52 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 53 0 R >>
 endobj
-31 0 obj
+53 0 obj
 << /Length 2636 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
@@ -381,10 +685,10 @@ BT /F1 10 Tf 0.09 0.16 0.24 rg 1 0 0 1 55 377 Tm (8. Preserve directory metadata
 BT /F1 10 Tf 0.09 0.16 0.24 rg 1 0 0 1 55 360.5 Tm (repairs; changing a case map can alter the meaning of existing filenames.) Tj ET
 endstream
 endobj
-32 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 33 0 R >>
+54 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 55 0 R >>
 endobj
-33 0 obj
+55 0 obj
 << /Length 2541 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
@@ -414,10 +718,10 @@ BT /F1 10.2 Tf 0.07 0.16 0.23 rg 1 0 0 1 50 413 Tm (source-level callback does n
 BT /F1 10.2 Tf 0.07 0.16 0.23 rg 1 0 0 1 50 398 Tm (variant or host profile is qualified.) Tj ET
 endstream
 endobj
-34 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 35 0 R >>
+56 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 57 0 R >>
 endobj
-35 0 obj
+57 0 obj
 << /Length 3657 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
@@ -456,10 +760,10 @@ BT /F1 10.2 Tf 0.07 0.16 0.23 rg 1 0 0 1 50 278 Tm (production BOOT/kernel integ
 BT /F1 10.2 Tf 0.07 0.16 0.23 rg 1 0 0 1 50 263 Tm (qualification.) Tj ET
 endstream
 endobj
-36 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 37 0 R >>
+58 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 59 0 R >>
 endobj
-37 0 obj
+59 0 obj
 << /Length 1910 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
@@ -481,10 +785,10 @@ BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 548 Tm (TexFAT semantics or ordinary
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 532 Tm (profiles.) Tj ET
 endstream
 endobj
-38 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 39 0 R >>
+60 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 61 0 R >>
 endobj
-39 0 obj
+61 0 obj
 << /Length 2485 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
@@ -509,10 +813,10 @@ BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 500 Tm (1.00 uses major 1 and minor 
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 484 Tm (cluster n maps to heap_offset + \(n-2\)*sectors_per_cluster.) Tj ET
 endstream
 endobj
-40 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 41 0 R >>
+62 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 63 0 R >>
 endobj
-41 0 obj
+63 0 obj
 << /Length 2488 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
@@ -537,10 +841,10 @@ BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 500 Tm (volume size; Microsoft recom
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 484 Tm (Maximum directory storage is 256 MiB \(8,388,608 records\). PercentInUse is a hint, 0xFF unknown.) Tj ET
 endstream
 endobj
-42 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 43 0 R >>
+64 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 65 0 R >>
 endobj
-43 0 obj
+65 0 obj
 << /Length 2425 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
@@ -564,10 +868,10 @@ BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 516 Tm (enumeration, traversal and d
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 500 Tm (allocation; refuse mutations not fully qualified. No short-name alias and no VFAT 0x0F records.) Tj ET
 endstream
 endobj
-44 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 45 0 R >>
+66 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 67 0 R >>
 endobj
-45 0 obj
+67 0 obj
 << /Length 2378 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
@@ -591,10 +895,10 @@ BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 516 Tm (apply all other stream rules
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 500 Tm (Check ceil\(DataLength/cluster_bytes\) before contiguous range arithmetic or chain walk.) Tj ET
 endstream
 endobj
-46 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 47 0 R >>
+68 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 69 0 R >>
 endobj
-47 0 obj
+69 0 obj
 << /Length 2132 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
@@ -617,10 +921,10 @@ BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 532 Tm (OS/2 EA convention, classic 
 BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 516 Tm (independent specification and tests.) Tj ET
 endstream
 endobj
-48 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 49 0 R >>
+70 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 71 0 R >>
 endobj
-49 0 obj
+71 0 obj
 << /Length 1512 >>
 stream
 0.05 0.13 0.22 rg 0 749 595 93 re f
@@ -640,59 +944,81 @@ BT /F1 10.2 Tf 0.09 0.16 0.24 rg 1 0 0 1 50 580 Tm (build, installer or release 
 endstream
 endobj
 xref
-0 50
+0 72
 0000000000 65535 f 
 0000000009 00000 n 
 0000000058 00000 n 
-0000000262 00000 n 
-0000000332 00000 n 
-0000000407 00000 n 
-0000000475 00000 n 
-0000000621 00000 n 
-0000003601 00000 n 
-0000003747 00000 n 
-0000005658 00000 n 
-0000005806 00000 n 
-0000007852 00000 n 
-0000008000 00000 n 
-0000009894 00000 n 
-0000010042 00000 n 
-0000012037 00000 n 
-0000012185 00000 n 
-0000014083 00000 n 
-0000014231 00000 n 
-0000016523 00000 n 
-0000016671 00000 n 
-0000018778 00000 n 
-0000018926 00000 n 
-0000020866 00000 n 
-0000021014 00000 n 
-0000022782 00000 n 
-0000022930 00000 n 
-0000024866 00000 n 
-0000025014 00000 n 
-0000027739 00000 n 
-0000027887 00000 n 
-0000030575 00000 n 
-0000030723 00000 n 
-0000033316 00000 n 
-0000033464 00000 n 
-0000037173 00000 n 
-0000037321 00000 n 
-0000039283 00000 n 
-0000039431 00000 n 
-0000041968 00000 n 
-0000042116 00000 n 
-0000044656 00000 n 
-0000044804 00000 n 
-0000047281 00000 n 
-0000047429 00000 n 
-0000049859 00000 n 
-0000050007 00000 n 
-0000052191 00000 n 
-0000052339 00000 n 
+0000000339 00000 n 
+0000000409 00000 n 
+0000000484 00000 n 
+0000000552 00000 n 
+0000000698 00000 n 
+0000002064 00000 n 
+0000002210 00000 n 
+0000004014 00000 n 
+0000004162 00000 n 
+0000005978 00000 n 
+0000006126 00000 n 
+0000007930 00000 n 
+0000008078 00000 n 
+0000009835 00000 n 
+0000009983 00000 n 
+0000011537 00000 n 
+0000011685 00000 n 
+0000012807 00000 n 
+0000012955 00000 n 
+0000014116 00000 n 
+0000014264 00000 n 
+0000015456 00000 n 
+0000015604 00000 n 
+0000016896 00000 n 
+0000017044 00000 n 
+0000017686 00000 n 
+0000017834 00000 n 
+0000020815 00000 n 
+0000020963 00000 n 
+0000022875 00000 n 
+0000023023 00000 n 
+0000025069 00000 n 
+0000025217 00000 n 
+0000027111 00000 n 
+0000027259 00000 n 
+0000029254 00000 n 
+0000029402 00000 n 
+0000031300 00000 n 
+0000031448 00000 n 
+0000033740 00000 n 
+0000033888 00000 n 
+0000035995 00000 n 
+0000036143 00000 n 
+0000038083 00000 n 
+0000038231 00000 n 
+0000039999 00000 n 
+0000040147 00000 n 
+0000042083 00000 n 
+0000042231 00000 n 
+0000044956 00000 n 
+0000045104 00000 n 
+0000047792 00000 n 
+0000047940 00000 n 
+0000050533 00000 n 
+0000050681 00000 n 
+0000054390 00000 n 
+0000054538 00000 n 
+0000056500 00000 n 
+0000056648 00000 n 
+0000059185 00000 n 
+0000059333 00000 n 
+0000061873 00000 n 
+0000062021 00000 n 
+0000064498 00000 n 
+0000064646 00000 n 
+0000067076 00000 n 
+0000067224 00000 n 
+0000069408 00000 n 
+0000069556 00000 n 
 trailer
-<< /Size 50 /Root 1 0 R >>
+<< /Size 72 /Root 1 0 R >>
 startxref
-53903
+71120
 %%EOF
