@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Build the canonical exFAT manual for the CMake install path.
 
-The source-embedded native RUN and portable DEB already generate their manuals
+The source-first native RUN and portable DEB generate their manuals
 via standalone/manual.py; this entry point keeps direct CMake installs equal.
 """
 from pathlib import Path
@@ -19,7 +19,7 @@ def main() -> None:
     version = version_file.read_text(encoding="utf-8").strip()
     if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version):
         raise SystemExit("Invalid exFAT release version")
-    source = Path(__file__).resolve().parents[1] / "docs/exFAT.pages"
+    source = Path(__file__).resolve().parents[1] / "docs/exFAT.pdfstreams"
     destination = Path(sys.argv[2])
     destination.parent.mkdir(parents=True, exist_ok=True)
     build(destination, source, version)

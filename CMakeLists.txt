@@ -88,7 +88,7 @@ add_custom_command(
  COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/standalone/generate_manual.py"
          "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" "${EXFAT_GENERATED_MANUAL}"
  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION"
-         "${CMAKE_CURRENT_SOURCE_DIR}/docs/exFAT.pages"
+         "${CMAKE_CURRENT_SOURCE_DIR}/docs/exFAT.pdfstreams"
          "${CMAKE_CURRENT_SOURCE_DIR}/standalone/manual.py"
          "${CMAKE_CURRENT_SOURCE_DIR}/standalone/generate_manual.py"
  COMMENT "Generate current independent exFAT filesystem manual"
