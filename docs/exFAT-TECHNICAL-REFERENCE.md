@@ -16,7 +16,7 @@ Boot checksum starts at zero; for every byte in first 11 sectors of its region r
 
 ### Worked stream mapping
 
-With 512-byte sectors, eight sectors per cluster and heap start 2048, cluster 100 starts at sector 2832. A 10000-byte ordinary stream with NoFatChain set uses three consecutive clusters 100..102, all marked in the active allocation bitmap. FAT entries are not authoritative for such a stream. Without NoFatChain, follow the FAT and reconcile each cluster with the bitmap. Return zeros beyond ValidDataLength within DataLength. When extending a contiguous file into nonadjacent space, build the complete FAT chain before publishing the cleared NoFatChain bit. Check for overflow and allocation conflicts.
+With 512-byte sectors, eight sectors per cluster and heap start 2048, cluster 100 starts at sector 2832. A 10000-byte ordinary stream with NoFatChain set uses three consecutive clusters 100..102, all marked in the active allocation bitmap. Without NoFatChain, follow the FAT and reconcile each cluster with the bitmap. The logical read boundary and zero-fill rule are defined in Name, time, length and checksum algorithms. When extending a contiguous file into nonadjacent space, build the complete FAT chain before publishing the cleared NoFatChain bit. Check for overflow and allocation conflicts.
 
 ## Directory-entry types and byte fields
 
@@ -24,7 +24,7 @@ Each record is 32 bytes. EntryType 0=end, 0x80 invalid, bit7 InUse, bit6 seconda
 
 ### Directory set validation
 
-File entry 0x85 declares its secondary count; stream extension 0xC0 describes the flags, name length and hash, valid length, first cluster and data length. Filename entries 0xC1 contain 15 UTF-16LE units each. A 31-unit filename requires three filename entries. Verify the set checksum across all records, excluding the primary checksum field, and the name hash using the volume's verified upcase table. Match names after hash comparison. The high entry-type bit marks in-use, bit 6 secondary, bit 5 benign. Preserve unknown benign records; reject unsupported critical records. Never publish an incomplete set as a complete object.
+A 31-code-unit filename requires three filename entries. Validate the declared secondary count, record sequence and filename capacity against the field inventory above. Verify checksums and name equality using the algorithms in the following section. Never publish an incomplete set as a complete object.
 
 ## Name, time, length and checksum algorithms
 
@@ -32,11 +32,11 @@ Set checksum: rotate a 16-bit accumulator right one and add each byte of all rec
 
 ## Mutation, recovery and external compatibility
 
-Use the specification's update ordering and flush requirements; for allocation, set dirty, update FAT if needed, update bitmap, publish directory set and clear dirty only when consistent; freeing must avoid dangling references. A complete data write also requires data before publishing the valid-data boundary. Compare exact bytes, allocation bitmap ownership, entry checksums and name hash after write. A dirty or media-failure flag is not a journal; unknown transaction state requires fail-closed policy. Test 512/1024/2048/4096-byte sector geometry, malformed boot checksums, truncated sets, mismatched up-case checksums, contiguous-to-fragmented conversion, cross-links, zero-length streams, VDL tail zeroing, missing bitmap and active FAT selection. Ordinary exFAT has no native VFAT names, FSInfo, OS/2 EA convention, classic FAT+ encoding or general ACL/journal; optional extensions need independent specification and tests.
+Use the specification's update ordering and flush requirements; for allocation, set dirty, update FAT if needed, update bitmap, publish directory set and clear dirty only when consistent; freeing must avoid dangling references. A complete data write also requires data before publishing the valid-data boundary. After write, verify the exact bytes and metadata using the ownership and checksum rules above. A dirty or media-failure flag is not a journal; unknown transaction state requires fail-closed policy. Test 512/1024/2048/4096-byte sector geometry, malformed boot checksums, truncated sets, mismatched up-case checksums, contiguous-to-fragmented conversion, cross-links, zero-length streams, VDL tail zeroing, missing bitmap and active FAT selection. Ordinary exFAT has no native VFAT names, FSInfo, OS/2 EA convention, classic FAT+ encoding or general ACL/journal; optional extensions need independent specification and tests.
 
 ### Mutation and recovery exercise
 
-Create independent fixtures with contiguous and chained streams, varying valid lengths, fragmented root, different sector sizes and inactive records. Reconstruct ownership from every active directory and special file, compare with the active allocation bitmap and FAT where applicable. Reserve a destination before relocation, verify bytes, publish the complete revised entry set and mapping, then retire original ownership only after durable publication. Native baseline exFAT does not provide TexFAT transaction guarantees. Fault-inject around every bitmap, FAT and entry-set publication. Verify with independent native tools on disposable copies. Unrecognised entry types or ambiguous allocation must stop writes.
+Create independent fixtures with contiguous and chained streams, varying valid lengths, fragmented root, different sector sizes and inactive records. Reconstruct ownership from every active directory and special file, compare with the active allocation bitmap and FAT where applicable. Reserve a destination before relocation, verify bytes, publish the complete revised entry set and mapping, then retire original ownership only after durable publication. Fault-inject around every bitmap, FAT and entry-set publication; the mutation ordering above is not a native transaction guarantee. Verify with independent native tools on disposable copies. Unrecognised entry types or ambiguous allocation must stop writes.
 
 ## Implementation and qualification boundary
 

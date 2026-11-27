@@ -93,36 +93,37 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 13 0 R >>
 endobj
 13 0 obj
-<< /Length 3340 >>
+<< /Length 3385 >>
 stream
 0.06 0.15 0.23 rg 0 768 595 74 re f
 1 1 1 rg BT /F2 10 Tf 43 811 Td (INFILTRATOR / FILESYSTEM ENGINEERING) Tj ET
 BT /F2 22 Tf 43 784 Td (exFAT - technical reference) Tj ET
 0.08 0.14 0.20 rg BT /F2 15 Tf 43 736 Td (3. Boot integrity and allocation) Tj ET
 0.08 0.14 0.20 rg BT /F3 10 Tf 43 706 Td (Boot checksum starts at zero; for every byte in first 11 sectors of its region) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 692 Td (rotate right 1 bit in 32 bits and add byte modulo 2^32; skip bytes 106,107,112 of) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 678 Td (boot sector. The checksum sector contains repeated LE32 checksum words. Validate) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 664 Td (each copy independently. Backup flags and PercentInUse are stale. VolumeFlags bits) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 650 Td (0 ActiveFat, 1 VolumeDirty, 2 MediaFailure, 3 ClearToZero; preserve reserved bits) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 636 Td (per revision. Allocation bitmap bit n-2 \(LSB-first\) identifies cluster n.) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 622 Td (FAT[0]=0xFFFFFFF8, FAT[1]=0xFFFFFFFF; normal successor 2..ClusterCount+1,) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 608 Td (bad=0xFFFFFFF7, EOC=0xFFFFFFFF. NoFatChain streams use a contiguous range, FAT is) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 594 Td (required for root directory; bitmap is allocation authority. Check both range and) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 580 Td (bitmap ownership. If two FATs exist, use the active FAT/bitmap pair; inactive FAT) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 566 Td (is stale, not an automatic mirror. Only TexFAT-aware implementations switch active) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 552 Td (pairs. ClearToZero must be cleared before mutation. Maximum cluster count 2^32-11,) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 538 Td (subject to heap and volume size; Microsoft recommends at most 2^24-2 clusters.) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 524 Td (Minimum heap is 2+NumberOfFats clusters. Maximum directory storage is 256 MiB) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 510 Td (\(8,388,608 records\). PercentInUse is a hint, 0xFF unknown.) Tj ET
-0.08 0.14 0.20 rg BT /F2 12 Tf 43 486 Td (Worked stream mapping) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 464 Td (With 512-byte sectors, eight sectors per cluster and heap start 2048, cluster 100) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 450 Td (starts at sector 2832. A 10000-byte ordinary stream with NoFatChain set uses three) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 436 Td (consecutive clusters 100..102, all marked in the active allocation bitmap. FAT) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 422 Td (entries are not authoritative for such a stream. Without NoFatChain, follow the FAT) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 408 Td (and reconcile each cluster with the bitmap. Return zeros beyond ValidDataLength) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 394 Td (within DataLength. When extending a contiguous file into nonadjacent space, build) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 380 Td (the complete FAT chain before publishing the cleared NoFatChain bit. Check for) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 366 Td (overflow and allocation conflicts.) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 692 Td (rotate right 1 bit in 32 bits and add byte modulo 2^32; skip bytes 106,107,112) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 678 Td (of boot sector. The checksum sector contains repeated LE32 checksum words.) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 664 Td (Validate each copy independently. Backup flags and PercentInUse are stale.) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 650 Td (VolumeFlags bits 0 ActiveFat, 1 VolumeDirty, 2 MediaFailure, 3 ClearToZero;) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 636 Td (preserve reserved bits per revision. Allocation bitmap bit n-2 \(LSB-first\)) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 622 Td (identifies cluster n. FAT[0]=0xFFFFFFF8, FAT[1]=0xFFFFFFFF; normal successor) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 608 Td (2..ClusterCount+1, bad=0xFFFFFFF7, EOC=0xFFFFFFFF. NoFatChain streams use a) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 594 Td (contiguous range, FAT is required for root directory; bitmap is allocation) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 580 Td (authority. Check both range and bitmap ownership. If two FATs exist, use the) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 566 Td (active FAT/bitmap pair; inactive FAT is stale, not an automatic mirror. Only) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 552 Td (TexFAT-aware implementations switch active pairs. ClearToZero must be cleared) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 538 Td (before mutation. Maximum cluster count 2^32-11, subject to heap and volume) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 524 Td (size; Microsoft recommends at most 2^24-2 clusters. Minimum heap is) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 510 Td (2+NumberOfFats clusters. Maximum directory storage is 256 MiB \(8,388,608) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 496 Td (records\). PercentInUse is a hint, 0xFF unknown.) Tj ET
+0.08 0.14 0.20 rg BT /F2 12 Tf 43 472 Td (Worked stream mapping) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 450 Td (With 512-byte sectors, eight sectors per cluster and heap start 2048, cluster) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 436 Td (100 starts at sector 2832. A 10000-byte ordinary stream with NoFatChain set) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 422 Td (uses three consecutive clusters 100..102, all marked in the active allocation) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 408 Td (bitmap. Without NoFatChain, follow the FAT and reconcile each cluster with the) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 394 Td (bitmap. The logical read boundary and zero-fill rule are defined in Name, time,) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 380 Td (length and checksum algorithms. When extending a contiguous file into) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 366 Td (nonadjacent space, build the complete FAT chain before publishing the cleared) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 352 Td (NoFatChain bit. Check for overflow and allocation conflicts.) Tj ET
 0.2 0.3 0.4 rg BT /F1 9 Tf 43 32 Td (Historical development and engineering reference | 4) Tj ET
 endstream
 endobj
@@ -130,36 +131,33 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 15 0 R >>
 endobj
 15 0 obj
-<< /Length 3367 >>
+<< /Length 2893 >>
 stream
 0.06 0.15 0.23 rg 0 768 595 74 re f
 1 1 1 rg BT /F2 10 Tf 43 811 Td (INFILTRATOR / FILESYSTEM ENGINEERING) Tj ET
 BT /F2 22 Tf 43 784 Td (exFAT - technical reference) Tj ET
 0.08 0.14 0.20 rg BT /F2 15 Tf 43 736 Td (4. Directory-entry types and byte fields) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 706 Td (Each record is 32 bytes. EntryType 0=end, 0x80 invalid, bit7 InUse, bit6 secondary,) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 692 Td (bit5 benign. Allocation Bitmap 0x81: flags at 1, first cluster at 20 \(4\), length at) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 678 Td (24 \(8\). Up-case Table 0x82: checksum at 4 \(4\), cluster at 20, length at 24. Volume) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 664 Td (Label 0x83: length at 1, 11 UTF-16 units at 2. File 0x85: secondary count at 1, set) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 650 Td (checksum at 2 \(2\), attributes at 4 \(2\), created/modified/accessed timestamps at) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 636 Td (8/12/16 \(4 each\), create/modify 10ms at 20/21, UTC offsets at 22/23/24. Stream) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 622 Td (Extension 0xC0: flags at 1, name length at 3, name hash at 4 \(2\), ValidDataLength) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 608 Td (at 8 \(8\), first cluster at 20 \(4\), DataLength at 24 \(8\). File Name 0xC1: flags at) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 594 Td (1, 15 UTF-16 units at 2. Validate set order, counts and exact checksum before use;) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 580 Td (unknown critical primary types require refusal and unknown critical secondary types) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 566 Td (constrain permitted access to the affected set. This project may conservatively) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 552 Td (refuse it; Microsoft section 8.2 permits limited enumeration, traversal and) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 538 Td (deletion under specific conditions. Preserve unknown benign entries and their) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 524 Td (allocation; refuse mutations not fully qualified. No short-name alias and no VFAT) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 510 Td (0x0F records.) Tj ET
-0.08 0.14 0.20 rg BT /F2 12 Tf 43 486 Td (Directory set validation) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 464 Td (File entry 0x85 declares its secondary count; stream extension 0xC0 describes the) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 450 Td (flags, name length and hash, valid length, first cluster and data length. Filename) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 436 Td (entries 0xC1 contain 15 UTF-16LE units each. A 31-unit filename requires three) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 422 Td (filename entries. Verify the set checksum across all records, excluding the primary) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 408 Td (checksum field, and the name hash using the volume's verified upcase table. Match) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 394 Td (names after hash comparison. The high entry-type bit marks in-use, bit 6 secondary,) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 380 Td (bit 5 benign. Preserve unknown benign records; reject unsupported critical records.) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 366 Td (Never publish an incomplete set as a complete object.) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 706 Td (Each record is 32 bytes. EntryType 0=end, 0x80 invalid, bit7 InUse, bit6) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 692 Td (secondary, bit5 benign. Allocation Bitmap 0x81: flags at 1, first cluster at 20) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 678 Td (\(4\), length at 24 \(8\). Up-case Table 0x82: checksum at 4 \(4\), cluster at 20,) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 664 Td (length at 24. Volume Label 0x83: length at 1, 11 UTF-16 units at 2. File 0x85:) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 650 Td (secondary count at 1, set checksum at 2 \(2\), attributes at 4 \(2\),) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 636 Td (created/modified/accessed timestamps at 8/12/16 \(4 each\), create/modify 10ms at) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 622 Td (20/21, UTC offsets at 22/23/24. Stream Extension 0xC0: flags at 1, name length) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 608 Td (at 3, name hash at 4 \(2\), ValidDataLength at 8 \(8\), first cluster at 20 \(4\),) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 594 Td (DataLength at 24 \(8\). File Name 0xC1: flags at 1, 15 UTF-16 units at 2.) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 580 Td (Validate set order, counts and exact checksum before use; unknown critical) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 566 Td (primary types require refusal and unknown critical secondary types constrain) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 552 Td (permitted access to the affected set. This project may conservatively refuse) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 538 Td (it; Microsoft section 8.2 permits limited enumeration, traversal and deletion) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 524 Td (under specific conditions. Preserve unknown benign entries and their) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 510 Td (allocation; refuse mutations not fully qualified. No short-name alias and no) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 496 Td (VFAT 0x0F records.) Tj ET
+0.08 0.14 0.20 rg BT /F2 12 Tf 43 472 Td (Directory set validation) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 450 Td (A 31-code-unit filename requires three filename entries. Validate the declared) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 436 Td (secondary count, record sequence and filename capacity against the field) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 422 Td (inventory above. Verify checksums and name equality using the algorithms in the) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 408 Td (following section. Never publish an incomplete set as a complete object.) Tj ET
 0.2 0.3 0.4 rg BT /F1 9 Tf 43 32 Td (Historical development and engineering reference | 5) Tj ET
 endstream
 endobj
@@ -194,34 +192,36 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 19 0 R >>
 endobj
 19 0 obj
-<< /Length 3126 >>
+<< /Length 3223 >>
 stream
 0.06 0.15 0.23 rg 0 768 595 74 re f
 1 1 1 rg BT /F2 10 Tf 43 811 Td (INFILTRATOR / FILESYSTEM ENGINEERING) Tj ET
 BT /F2 22 Tf 43 784 Td (exFAT - technical reference) Tj ET
 0.08 0.14 0.20 rg BT /F2 15 Tf 43 736 Td (6. Mutation, recovery and external compatibility) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 706 Td (Use the specification's update ordering and flush requirements; for allocation, set) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 692 Td (dirty, update FAT if needed, update bitmap, publish directory set and clear dirty) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 678 Td (only when consistent; freeing must avoid dangling references. A complete data write) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 664 Td (also requires data before publishing the valid-data boundary. Compare exact bytes,) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 650 Td (allocation bitmap ownership, entry checksums and name hash after write. A dirty or) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 636 Td (media-failure flag is not a journal; unknown transaction state requires fail-closed) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 622 Td (policy. Test 512/1024/2048/4096-byte sector geometry, malformed boot checksums,) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 608 Td (truncated sets, mismatched up-case checksums, contiguous-to-fragmented conversion,) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 594 Td (cross-links, zero-length streams, VDL tail zeroing, missing bitmap and active FAT) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 580 Td (selection. Ordinary exFAT has no native VFAT names, FSInfo, OS/2 EA convention,) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 566 Td (classic FAT+ encoding or general ACL/journal; optional extensions need independent) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 552 Td (specification and tests.) Tj ET
-0.08 0.14 0.20 rg BT /F2 12 Tf 43 528 Td (Mutation and recovery exercise) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 506 Td (Create independent fixtures with contiguous and chained streams, varying valid) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 492 Td (lengths, fragmented root, different sector sizes and inactive records. Reconstruct) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 478 Td (ownership from every active directory and special file, compare with the active) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 464 Td (allocation bitmap and FAT where applicable. Reserve a destination before) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 450 Td (relocation, verify bytes, publish the complete revised entry set and mapping, then) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 436 Td (retire original ownership only after durable publication. Native baseline exFAT) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 422 Td (does not provide TexFAT transaction guarantees. Fault-inject around every bitmap,) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 408 Td (FAT and entry-set publication. Verify with independent native tools on disposable) Tj ET
-0.08 0.14 0.20 rg BT /F3 10 Tf 43 394 Td (copies. Unrecognised entry types or ambiguous allocation must stop writes.) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 706 Td (Use the specification's update ordering and flush requirements; for allocation,) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 692 Td (set dirty, update FAT if needed, update bitmap, publish directory set and clear) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 678 Td (dirty only when consistent; freeing must avoid dangling references. A complete) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 664 Td (data write also requires data before publishing the valid-data boundary. After) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 650 Td (write, verify the exact bytes and metadata using the ownership and checksum) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 636 Td (rules above. A dirty or media-failure flag is not a journal; unknown) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 622 Td (transaction state requires fail-closed policy. Test 512/1024/2048/4096-byte) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 608 Td (sector geometry, malformed boot checksums, truncated sets, mismatched up-case) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 594 Td (checksums, contiguous-to-fragmented conversion, cross-links, zero-length) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 580 Td (streams, VDL tail zeroing, missing bitmap and active FAT selection. Ordinary) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 566 Td (exFAT has no native VFAT names, FSInfo, OS/2 EA convention, classic FAT+) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 552 Td (encoding or general ACL/journal; optional extensions need independent) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 538 Td (specification and tests.) Tj ET
+0.08 0.14 0.20 rg BT /F2 12 Tf 43 514 Td (Mutation and recovery exercise) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 492 Td (Create independent fixtures with contiguous and chained streams, varying valid) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 478 Td (lengths, fragmented root, different sector sizes and inactive records.) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 464 Td (Reconstruct ownership from every active directory and special file, compare) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 450 Td (with the active allocation bitmap and FAT where applicable. Reserve a) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 436 Td (destination before relocation, verify bytes, publish the complete revised entry) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 422 Td (set and mapping, then retire original ownership only after durable publication.) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 408 Td (Fault-inject around every bitmap, FAT and entry-set publication; the mutation) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 394 Td (ordering above is not a native transaction guarantee. Verify with independent) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 380 Td (native tools on disposable copies. Unrecognised entry types or ambiguous) Tj ET
+0.08 0.14 0.20 rg BT /F3 10 Tf 43 366 Td (allocation must stop writes.) Tj ET
 0.2 0.3 0.4 rg BT /F1 9 Tf 43 32 Td (Historical development and engineering reference | 7) Tj ET
 endstream
 endobj
@@ -288,18 +288,18 @@ xref
 0000003964 00000 n 
 0000006286 00000 n 
 0000006434 00000 n 
-0000009826 00000 n 
-0000009974 00000 n 
-0000013393 00000 n 
-0000013541 00000 n 
-0000015766 00000 n 
-0000015914 00000 n 
-0000019092 00000 n 
-0000019240 00000 n 
-0000021421 00000 n 
-0000021569 00000 n 
+0000009871 00000 n 
+0000010019 00000 n 
+0000012964 00000 n 
+0000013112 00000 n 
+0000015337 00000 n 
+0000015485 00000 n 
+0000018760 00000 n 
+0000018908 00000 n 
+0000021089 00000 n 
+0000021237 00000 n 
 trailer
 << /Size 24 /Root 1 0 R >>
 startxref
-22736
+22404
 %%EOF
