@@ -1,8 +1,8 @@
 # exFAT original-format technical reference
 
-This supplement expands the existing historical manual. It distinguishes normative media structures, historical compatibility profiles, and implementation qualification. It takes precedence over simplified descriptions in the manual where details differ; the cited original specifications remain authoritative. No additional implemented operation is claimed.
-
 ## Origin, scope and non-compatible derivatives
+
+This integrated reference describes native media structures, historical compatibility profiles and independent implementation requirements. The cited original specifications remain authoritative.
 
 Microsoft introduced exFAT with Windows Embedded CE 6.0 in November 2006; Vista SP1 and Windows XP updates expanded deployment. SDXC uses exFAT for portable large media. Reverse-engineering work appeared around 2010; Microsoft published the exFAT specification in August 2019. It is not a FAT32 extension using the old BPB or directory entry. MBR type 0x07 and GPT basic data GUID EBD0A0A2-B9E5-4433-87C0-68B6B72699C7 are not unique identifications; inspect the actual boot structure. The 64-bit file-length field is not permission to exceed the volume, cluster heap or implementation limits. TexFAT is a distinct transactional extension; baseline exFAT must not claim TexFAT semantics or ordinary FAT32+ support. FATX, Turbo FAT and classic VFAT are not exFAT profiles.
 
@@ -14,9 +14,17 @@ All multibyte fields are little-endian. Offset:size: 0:3 JumpBoot (EB 76 90); 3:
 
 Boot checksum starts at zero; for every byte in first 11 sectors of its region rotate right 1 bit in 32 bits and add byte modulo 2^32; skip bytes 106,107,112 of boot sector. The checksum sector contains repeated LE32 checksum words. Validate each copy independently. Backup flags and PercentInUse are stale. VolumeFlags bits 0 ActiveFat, 1 VolumeDirty, 2 MediaFailure, 3 ClearToZero; preserve reserved bits per revision. Allocation bitmap bit n-2 (LSB-first) identifies cluster n. FAT[0]=0xFFFFFFF8, FAT[1]=0xFFFFFFFF; normal successor 2..ClusterCount+1, bad=0xFFFFFFF7, EOC=0xFFFFFFFF. NoFatChain streams use a contiguous range, FAT is required for root directory; bitmap is allocation authority. Check both range and bitmap ownership. If two FATs exist, use the active FAT/bitmap pair; inactive FAT is stale, not an automatic mirror. Only TexFAT-aware implementations switch active pairs. ClearToZero must be cleared before mutation. Maximum cluster count 2^32-11, subject to heap and volume size; Microsoft recommends at most 2^24-2 clusters. Minimum heap is 2+NumberOfFats clusters. Maximum directory storage is 256 MiB (8,388,608 records). PercentInUse is a hint, 0xFF unknown.
 
+### Worked stream mapping
+
+With 512-byte sectors, eight sectors per cluster and heap start 2048, cluster 100 starts at sector 2832. A 10000-byte ordinary stream with NoFatChain set uses three consecutive clusters 100..102, all marked in the active allocation bitmap. FAT entries are not authoritative for such a stream. Without NoFatChain, follow the FAT and reconcile each cluster with the bitmap. Return zeros beyond ValidDataLength within DataLength. When extending a contiguous file into nonadjacent space, build the complete FAT chain before publishing the cleared NoFatChain bit. Check for overflow and allocation conflicts.
+
 ## Directory-entry types and byte fields
 
 Each record is 32 bytes. EntryType 0=end, 0x80 invalid, bit7 InUse, bit6 secondary, bit5 benign. Allocation Bitmap 0x81: flags at 1, first cluster at 20 (4), length at 24 (8). Up-case Table 0x82: checksum at 4 (4), cluster at 20, length at 24. Volume Label 0x83: length at 1, 11 UTF-16 units at 2. File 0x85: secondary count at 1, set checksum at 2 (2), attributes at 4 (2), created/modified/accessed timestamps at 8/12/16 (4 each), create/modify 10ms at 20/21, UTC offsets at 22/23/24. Stream Extension 0xC0: flags at 1, name length at 3, name hash at 4 (2), ValidDataLength at 8 (8), first cluster at 20 (4), DataLength at 24 (8). File Name 0xC1: flags at 1, 15 UTF-16 units at 2. Validate set order, counts and exact checksum before use; unknown critical primary types require refusal and unknown critical secondary types constrain permitted access to the affected set. This project may conservatively refuse it; Microsoft section 8.2 permits limited enumeration, traversal and deletion under specific conditions. Preserve unknown benign entries and their allocation; refuse mutations not fully qualified. No short-name alias and no VFAT 0x0F records.
+
+### Directory set validation
+
+File entry 0x85 declares its secondary count; stream extension 0xC0 describes the flags, name length and hash, valid length, first cluster and data length. Filename entries 0xC1 contain 15 UTF-16LE units each. A 31-unit filename requires three filename entries. Verify the set checksum across all records, excluding the primary checksum field, and the name hash using the volume's verified upcase table. Match names after hash comparison. The high entry-type bit marks in-use, bit 6 secondary, bit 5 benign. Preserve unknown benign records; reject unsupported critical records. Never publish an incomplete set as a complete object.
 
 ## Name, time, length and checksum algorithms
 
@@ -26,19 +34,18 @@ Set checksum: rotate a 16-bit accumulator right one and add each byte of all rec
 
 Use the specification's update ordering and flush requirements; for allocation, set dirty, update FAT if needed, update bitmap, publish directory set and clear dirty only when consistent; freeing must avoid dangling references. A complete data write also requires data before publishing the valid-data boundary. Compare exact bytes, allocation bitmap ownership, entry checksums and name hash after write. A dirty or media-failure flag is not a journal; unknown transaction state requires fail-closed policy. Test 512/1024/2048/4096-byte sector geometry, malformed boot checksums, truncated sets, mismatched up-case checksums, contiguous-to-fragmented conversion, cross-links, zero-length streams, VDL tail zeroing, missing bitmap and active FAT selection. Ordinary exFAT has no native VFAT names, FSInfo, OS/2 EA convention, classic FAT+ encoding or general ACL/journal; optional extensions need independent specification and tests.
 
-## Primary source and implementation boundary
-
-Microsoft exFAT File System Specification, revision 1.00, https://learn.microsoft.com/en-us/windows/win32/fileio/exfat-specification ; user-supplied historical File Allocation Table reference (Wikipedia, CC BY-SA), https://en.wikipedia.org/wiki/File_Allocation_Table . Field-level rules here are a compact reference to the specification, not its replacement. Provider support is established only by exact Common V2 source, executable tests and packaged binary. No new operation, build, installer or release is claimed by these documentation changes.
-
-
-## Worked stream mapping
-
-With 512-byte sectors, eight sectors per cluster and heap start 2048, cluster 100 starts at sector 2832. A 10000-byte ordinary stream with NoFatChain set uses three consecutive clusters 100..102, all marked in the active allocation bitmap. FAT entries are not authoritative for such a stream. Without NoFatChain, follow the FAT and reconcile each cluster with the bitmap. Return zeros beyond ValidDataLength within DataLength. When extending a contiguous file into nonadjacent space, build the complete FAT chain before publishing the cleared NoFatChain bit. Check for overflow and allocation conflicts.
-
-## Directory set validation
-
-File entry 0x85 declares its secondary count; stream extension 0xC0 describes the flags, name length and hash, valid length, first cluster and data length. Filename entries 0xC1 contain 15 UTF-16LE units each. A 31-unit filename requires three filename entries. Verify the set checksum across all records, excluding the primary checksum field, and the name hash using the volume's verified upcase table. Match names after hash comparison. The high entry-type bit marks in-use, bit 6 secondary, bit 5 benign. Preserve unknown benign records; reject unsupported critical records. Never publish an incomplete set as a complete object.
-
-## Mutation and recovery exercise
+### Mutation and recovery exercise
 
 Create independent fixtures with contiguous and chained streams, varying valid lengths, fragmented root, different sector sizes and inactive records. Reconstruct ownership from every active directory and special file, compare with the active allocation bitmap and FAT where applicable. Reserve a destination before relocation, verify bytes, publish the complete revised entry set and mapping, then retire original ownership only after durable publication. Native baseline exFAT does not provide TexFAT transaction guarantees. Fault-inject around every bitmap, FAT and entry-set publication. Verify with independent native tools on disposable copies. Unrecognised entry types or ambiguous allocation must stop writes.
+
+## Implementation and qualification boundary
+
+At historical source revision c298a342036f: The archived exFAT provider embedded a format-selected ChaN FatFs engine. Hosted read, write, create, query, sync and format were declared; the read-only profile did not expose writable callbacks. Host logical sector geometry controlled formatting and native read faults were preserved across namespace operations.
+
+Common V2 is the sole independent provider interface: https://github.com/Infiltrator-Projects/Libraries/blob/main/docs/FILESYSTEM_COMMON_ABI_V2.md . Negotiate operation masks and media profiles. Use bounded partition-relative I/O, exclusive durable ownership and explicit flush for mutation. Format, namespace, relocation, recovery, hosted/freestanding, BOOT/kernel and package qualification are separate. Current capability and release status belongs to repository README and exact-source qualification records. Historical evidence is not a current support claim.
+
+Historical source reference: https://github.com/Infiltrator-Projects/Filesystem-exFAT/tree/c298a342036f .
+
+## Primary sources and format authority
+
+Microsoft exFAT File System Specification, revision 1.00, https://learn.microsoft.com/en-us/windows/win32/fileio/exfat-specification ; user-supplied historical File Allocation Table reference (Wikipedia, CC BY-SA), https://en.wikipedia.org/wiki/File_Allocation_Table . Field-level rules here are a compact reference to the specification, not its replacement. Provider support is established only by exact Common V2 source, executable tests and packaged binary. 
