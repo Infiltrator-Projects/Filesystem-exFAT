@@ -136,7 +136,7 @@ int main(int argc,char **argv) {
        !core || !vol || core->header.capabilities!=IFS_FS_CORE_ALL ||
        vol->header.capabilities!=
          (IFS_FS_VOLUME_QUERY|IFS_FS_VOLUME_SYNC|IFS_FS_VOLUME_FORMAT|
-          IFS_FS_VOLUME_LABEL_GET|IFS_FS_VOLUME_LABEL_SET|IFS_FS_VOLUME_CHECK) || !vol->label || !vol->set_label || !vol->check || vol->repair)
+          IFS_FS_VOLUME_LABEL_GET|IFS_FS_VOLUME_LABEL_SET|IFS_FS_VOLUME_CHECK|IFS_FS_VOLUME_REPAIR) || !vol->label || !vol->set_label || !vol->check || !vol->repair)
         return fail("native CORE or VOLUME capabilities incorrect");
 
     const IfsFsFormatProfileOpsV2 *profiles=(const void*)ifs_fs_group_v2(api,IFS_FS_GROUP_FORMAT_PROFILE);
@@ -261,6 +261,44 @@ int main(int argc,char **argv) {
     if(vol->check(mounted,0u,&errors)!=IFS_FS_OK || errors ||
        d.writes!=writes_before_check)
         return fail("clean native exFAT ownership check");
+    /* Damage only the independently formatted backup boot region. CHECK
+     * must identify the damaged redundancy while the primary and user
+     * payload remain readable; repair may touch only the backup. */
+    {
+        uint8_t boot[512],before[512],after[512],original,damaged,restored;
+        if(pread(d.fd,boot,sizeof boot,0)!=(ssize_t)sizeof boot ||
+           boot[108]<9u || boot[108]>12u ||
+           core->unmount(mounted)!=IFS_FS_OK)
+            return fail("backup boot fixture geometry");
+        memcpy(before,boot,sizeof before);
+        const uint64_t sector=UINT64_C(1)<<boot[108];
+        const off_t at=(off_t)(12u*sector+120u);
+        if(pread(d.fd,&original,1u,at)!=1)return fail("read backup boot");
+        damaged=(uint8_t)(original^0x5au);
+        if(pwrite(d.fd,&damaged,1u,at)!=1 || fsync(d.fd))
+            return fail("inject backup boot damage");
+        IfsFsHostRuntimeV2 ro=host;
+        ro.capabilities=IFS_FS_HOST_READ_ONLY;ro.write_at=NULL;ro.flush=NULL;
+        unsigned writes=d.writes;
+        uint64_t repairs=UINT64_MAX;
+        mounted=NULL;
+        if(core->mount(&ro,&mounted,&info)!=IFS_FS_OK ||
+           vol->check(mounted,0u,&errors)!=IFS_FS_OK || errors!=1u ||
+           vol->repair(mounted,0u,&repairs)!=IFS_FS_ACCESS || repairs ||
+           core->unmount(mounted)!=IFS_FS_OK || d.writes!=writes)
+            return fail("backup boot read-only check and repair refusal");
+        mounted=NULL;
+        if(core->mount(&host,&mounted,&info)!=IFS_FS_OK ||
+           vol->repair(mounted,0u,&repairs)!=IFS_FS_OK || repairs!=1u ||
+           vol->check(mounted,0u,&errors)!=IFS_FS_OK || errors ||
+           vol->repair(mounted,0u,&repairs)!=IFS_FS_OK || repairs ||
+           pread(d.fd,&restored,1u,at)!=1 || restored!=original ||
+           pread(d.fd,after,sizeof after,0)!=(ssize_t)sizeof after ||
+           memcmp(before,after,sizeof before) ||
+           core->read(mounted,"/TESTDIR/OUTPUT.BIN",0u,back,sizeof(back))!=IFS_FS_OK ||
+           memcmp(back,data,sizeof(data)))
+            return fail("backup boot repair, idempotence and payload preservation");
+    }
     /* Independently alter the allocation bitmap on the disposable disk.
      * Cold-mount each corruption, require CHECK to detect it without any
      * media mutation, and restore the original bitmap before continuing. */

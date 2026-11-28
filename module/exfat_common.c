@@ -102,7 +102,7 @@ static uint32_t fat_time(void *context)
  * by the 32-bit rotate/add checksum. Never skip this check for BOOT.
  * This is a corruption check, not a cryptographic trust signature.
  */
-static int boot_checksum(const IfsFsHostRuntimeV2 *host,uint32_t sector)
+static int boot_region_checksum(const IfsFsHostRuntimeV2 *host,uint32_t sector,uint32_t base)
 {
     uint8_t buf[4096];
     uint32_t sum=0;
@@ -111,7 +111,7 @@ static int boot_checksum(const IfsFsHostRuntimeV2 *host,uint32_t sector)
         return IFS_FS_CORRUPT;
     for(uint32_t block=0;block<11u;++block) {
         int status=ifs_fs_host_read_bytes_v2(
-            host,(uint64_t)block*sector,buf,sector);
+            host,(uint64_t)(base+block)*sector,buf,sector);
         if(status!=IFS_FS_OK)return status;
         for(uint32_t i=0;i<sector;++i) {
             if(block==0u&&(i==106u||i==107u||i==112u))
@@ -120,7 +120,7 @@ static int boot_checksum(const IfsFsHostRuntimeV2 *host,uint32_t sector)
             sum+=(uint32_t)buf[i];
         }
     }
-    int status=ifs_fs_host_read_bytes_v2(host,(uint64_t)11u*sector,buf,sector);
+    int status=ifs_fs_host_read_bytes_v2(host,(uint64_t)(base+11u)*sector,buf,sector);
     if(status!=IFS_FS_OK)return status;
     for(uint32_t i=0;i<sector;i+=4u) {
         const uint32_t recorded=(uint32_t)buf[i] |
@@ -182,7 +182,7 @@ static int geometry(const IfsFsHostRuntimeV2 *h,uint32_t *sector,uint32_t *clust
     /* The disk BPB sector size is authoritative for FatFs. A 512-byte
      * exFAT image can be hosted by a 4K BlockIo device when all requests
      * are translated by the Common V2 byte-range bridge above. */
-    status=boot_checksum(h,*sector);
+    status=boot_region_checksum(h,*sector,0u);
     if(status!=IFS_FS_OK)return status;
     return exfat_layout(b,h,*sector);
 }
@@ -540,6 +540,83 @@ static int v2_map_file(void *v,const char *name,uint64_t first,
     }
     return v2_leave_operation(rc);
 }
+/* The backup boot region is a native exFAT redundancy structure. A
+ * checksum-valid but different backup is ambiguous: report it, never
+ * overwrite it by guessing which version is authoritative. Mutable
+ * VolumeFlags and PercentInUse are explicitly excluded from comparison. */
+static int backup_boot_state(uint32_t sector,int *repairable)
+{
+    *repairable=0;
+    int rc=boot_region_checksum(&s.host,sector,12u);
+    if(rc==IFS_FS_CORRUPT){*repairable=1;return rc;}
+    if(rc!=IFS_FS_OK)return rc;
+    uint8_t main[4096],backup[4096];
+    for(uint32_t block=0u;block<11u;++block) {
+        if(s.host.cancelled && s.host.cancelled(s.host.context))return IFS_FS_BUSY;
+        rc=ifs_fs_host_read_bytes_v2(&s.host,(uint64_t)block*sector,main,sector);
+        if(rc!=IFS_FS_OK)return rc;
+        rc=ifs_fs_host_read_bytes_v2(&s.host,(uint64_t)(block+12u)*sector,backup,sector);
+        if(rc!=IFS_FS_OK)return rc;
+        for(uint32_t i=0u;i<sector;++i) {
+            if(!block && (i==106u || i==107u || i==112u))continue;
+            if(main[i]!=backup[i])return IFS_FS_CORRUPT;
+        }
+    }
+    return IFS_FS_OK;
+}
+static int v2_repair(void *v,uint32_t flags,uint64_t *repairs)
+{
+    if(!repairs)return IFS_FS_INVALID;
+    *repairs=0u;
+    if(!v2_enter_operation())return IFS_FS_BUSY;
+    if(!live(v))return v2_leave_operation(IFS_FS_INVALID);
+    if(flags)return v2_leave_operation(IFS_FS_UNSUPPORTED);
+    if(!s.writable)return v2_leave_operation(IFS_FS_ACCESS);
+    if(er_has_plan())return v2_leave_operation(IFS_FS_BUSY);
+    uint32_t sector,cluster;
+    int rc=geometry(&s.host,&sector,&cluster);
+    if(rc!=IFS_FS_OK)return v2_leave_operation(rc);
+    if(cluster!=s.cluster_bytes ||
+       s.host.logical_sector_bytes!=sector || s.host.physical_sector_bytes!=sector)
+        return v2_leave_operation(IFS_FS_UNSUPPORTED);
+    int repairable=0;
+    rc=backup_boot_state(sector,&repairable);
+    if(rc==IFS_FS_OK)return v2_leave_operation(IFS_FS_OK);
+    if(rc!=IFS_FS_CORRUPT || !repairable)return v2_leave_operation(rc);
+    /* Check the entire supported namespace and allocation ownership before
+     * changing redundant boot metadata. Never repair ambiguous allocation. */
+    uint64_t errors=0u;
+    native_read_failure=IFS_FS_OK;
+    rc=ifs_exfat_engine_check(&s.host,&errors);
+    if(native_read_failure!=IFS_FS_OK)return v2_leave_operation(native_read_failure);
+    if(rc!=IFS_FS_OK || errors)return v2_leave_operation(rc!=IFS_FS_OK?rc:IFS_FS_CORRUPT);
+    uint8_t region[12u*4096u];
+    for(uint32_t i=0u;i<12u;++i) {
+        if(s.host.cancelled && s.host.cancelled(s.host.context))
+            return v2_leave_operation(IFS_FS_BUSY);
+        rc=ifs_fs_host_read_bytes_v2(&s.host,(uint64_t)i*sector,region+(size_t)i*sector,sector);
+        if(rc!=IFS_FS_OK)return v2_leave_operation(rc);
+    }
+    /* Main boot remains untouched. Checkpoint the backup data first and
+     * publish its checksum sector last; interruption leaves a repairable
+     * backup, rather than a damaged main boot region. */
+    for(uint32_t i=0u;i<12u;++i) {
+        if(s.host.cancelled && s.host.cancelled(s.host.context)) {
+            if(i)s.fault=1;
+            return v2_leave_operation(i?IFS_FS_IO_ERROR:IFS_FS_BUSY);
+        }
+        rc=ifs_fs_host_write_bytes_v2(&s.host,(uint64_t)(i+12u)*sector,
+                                      region+(size_t)i*sector,sector);
+        if(rc!=IFS_FS_OK || ((i==10u || i==11u) && s.host.flush(s.host.context))) {
+            s.fault=1;
+            return v2_leave_operation(IFS_FS_IO_ERROR);
+        }
+    }
+    rc=backup_boot_state(sector,&repairable);
+    if(rc==IFS_FS_OK)*repairs=1u;
+    else s.fault=1;
+    return v2_leave_operation(rc);
+}
 static int v2_check(void *v,uint32_t flags,uint64_t *errors)
 {
     if(!errors)return IFS_FS_INVALID;
@@ -549,6 +626,16 @@ static int v2_check(void *v,uint32_t flags,uint64_t *errors)
     native_read_failure=IFS_FS_OK;
     int rc=ifs_exfat_engine_check(&s.host,errors);
     if(native_read_failure!=IFS_FS_OK){*errors=0u;rc=native_read_failure;}
+    if(rc==IFS_FS_OK) {
+        uint32_t sector,cluster;
+        rc=geometry(&s.host,&sector,&cluster);
+        if(rc==IFS_FS_OK) {
+            int repairable=0;
+            rc=backup_boot_state(sector,&repairable);
+        }
+        if(rc==IFS_FS_CORRUPT){++*errors;rc=IFS_FS_OK;}
+        else if(rc!=IFS_FS_OK)*errors=0u;
+    }
     return v2_leave_operation(rc);
 }
 #include "exfat_relocation.h"
@@ -629,9 +716,9 @@ static const IfsFsVolumeOpsV2 group_volume={
     .query=guarded_v2_query,.label=v2_label
 #else
              IFS_FS_VOLUME_QUERY|IFS_FS_VOLUME_SYNC|IFS_FS_VOLUME_FORMAT|
-             IFS_FS_VOLUME_LABEL_GET|IFS_FS_VOLUME_LABEL_SET|IFS_FS_VOLUME_CHECK},
+             IFS_FS_VOLUME_LABEL_GET|IFS_FS_VOLUME_LABEL_SET|IFS_FS_VOLUME_CHECK|IFS_FS_VOLUME_REPAIR},
     .query=guarded_v2_query, .sync=guarded_v2_sync, .format=guarded_format,
-    .label=v2_label,.set_label=v2_set_label,.check=v2_check
+    .label=v2_label,.set_label=v2_set_label,.check=v2_check,.repair=v2_repair
 #endif
 };
 /* Native CORE and VOLUME callbacks use the same mounted exFAT FatFs state. */
