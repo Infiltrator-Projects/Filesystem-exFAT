@@ -25,8 +25,9 @@ jobs:
             -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address \
             -DCMAKE_SHARED_LINKER_FLAGS=-fsanitize=address
           cmake --build build-asan --target exfat-unified --parallel 2
+          bash standalone/prepare-common.sh
           cc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror \
-            -fsanitize=address -fno-omit-frame-pointer -Iinclude \
+            -fsanitize=address -fno-omit-frame-pointer -Isrc/infiltratr-common/include \
             tests/exfat_so_realimage_test.c -ldl -o build-asan/realimage-test
           work=$(mktemp -d)
           trap 'rm -rf "$work"' EXIT

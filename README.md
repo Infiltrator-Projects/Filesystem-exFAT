@@ -36,3 +36,5 @@ The target installation is `/System/Filesystems/exFAT.so` and `/System/Resources
 The original-format reference and historical migration notes describe different evidence from the current production provider. When descriptions disagree, the current exported descriptor, implementation, executable tests and exact-revision release evidence take precedence.
 
 The [engineering reference](docs/exFAT-TECHNICAL-REFERENCE.md) is the unified technical manual; worked examples are integrated into the appropriate chapters.
+
+Hosted, firmware and external test builds use the upstream Common V2 header. The source archive and native installer resolve the same immutable Libraries revision as the Git checkout.

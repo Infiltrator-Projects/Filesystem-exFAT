@@ -9,9 +9,20 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(INFILTRATR_COMMON_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(INFILTRATR_COMMON_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+# Reuse the pinned checkout populated by the Make and native-installer entry
+# points. Bare GitHub source archives can also configure directly via FetchContent.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/infiltratr-common/CMakeLists.txt" AND
+   NOT FETCHCONTENT_SOURCE_DIR_INFILTRATR_COMMON)
+ execute_process(COMMAND bash "${CMAKE_CURRENT_SOURCE_DIR}/standalone/prepare-common.sh"
+                 RESULT_VARIABLE common_status)
+ if(NOT common_status EQUAL 0)
+  message(FATAL_ERROR "The Common dependency did not match its source pin")
+ endif()
+ set(FETCHCONTENT_SOURCE_DIR_INFILTRATR_COMMON "${CMAKE_CURRENT_SOURCE_DIR}/src/infiltratr-common")
+endif()
 FetchContent_Declare(infiltratr_common
  GIT_REPOSITORY https://github.com/Infiltrator-Projects/Libraries.git
- GIT_TAG 225e640ebed5351b1481bfbeef1a6144ca5146e7)
+ GIT_TAG 3c771c83a3b41bf57e8ca6527e7ec84465800381)
 FetchContent_MakeAvailable(infiltratr_common)
 # Common supplies link-time code, not independent exFAT package payloads.
 # Installing the Common directory would leak unrelated headers, archives,
@@ -52,7 +63,7 @@ add_library(exfat-unified SHARED
  "${FATFS}/ff.c" "${FATFS}/ffunicode.c")
 target_include_directories(exfat-unified PRIVATE
  "${EX_SRC}" "${FATFS}" "${EXAPI}" "${CMAKE_CURRENT_SOURCE_DIR}/compat"
- "${CMAKE_CURRENT_SOURCE_DIR}/include")
+ "${infiltratr_common_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_compile_definitions(exfat-unified PRIVATE
  _GNU_SOURCE _FILE_OFFSET_BITS=64 IFS_FATFS_ONLY=64)
 target_compile_options(exfat-unified PRIVATE
@@ -74,7 +85,7 @@ add_custom_command(TARGET exfat-unified POST_BUILD
 if(BUILD_TESTING)
  add_executable(exfat-unified-contract tests/test_unified_module.c)
  target_include_directories(exfat-unified-contract PRIVATE
-  "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/compat" "${EXAPI}" "${FATFS}")
+  "${infiltratr_common_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/compat" "${EXAPI}" "${FATFS}")
  target_link_libraries(exfat-unified-contract PRIVATE exfat-unified)
  add_test(NAME exfat-unified-module COMMAND exfat-unified-contract)
  add_test(NAME exfat-v2-only-public-exports

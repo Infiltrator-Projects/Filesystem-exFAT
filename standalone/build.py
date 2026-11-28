@@ -42,8 +42,8 @@ def install_deps():
         run([*apt, "install", "-y", "--no-install-recommends", *packages])
 
 def prepare_release_source():
-    """This exFAT repository contains its own complete source; do not fetch another filesystem."""
-    return None
+    """Obtain the canonical header used by the provider and independent harness."""
+    run(["bash", ROOT / "standalone/prepare-common.sh"])
 
 def embedded_source_files():
     return []
@@ -89,7 +89,7 @@ def test(module, workspace=None, training=False):
         run(["cc", "-std=c11", "-O2", "-Wall", "-Wextra", "-Werror",
              "-I", ROOT / "native/filesystems/exfat/module",
              "-I", ROOT / "native/portable/fatfs",
-             "-I", ROOT / "include",
+             "-I", ROOT / "src/infiltratr-common/include",
              ROOT / "tests/exfat_so_realimage_test.c", "-ldl", "-o", harness])
         exfat = workspace / "exfat.img"
         fat32 = workspace / "fat32.img"
@@ -102,6 +102,7 @@ def test(module, workspace=None, training=False):
         run(["fsck.exfat", "-n", exfat])
 
 def build(profile, module):
+    run(["bash", ROOT / "standalone/prepare-common.sh"])
     if profile not in ("portable", "aggressive"):
         raise RuntimeError("Invalid filesystem build profile")
     flags = (["-O2", "-march=x86-64", "-mtune=generic"] if profile == "portable"

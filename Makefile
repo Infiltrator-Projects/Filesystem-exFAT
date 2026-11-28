@@ -1,17 +1,18 @@
 CC ?= cc
 CFLAGS ?= -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror
 OUT ?= build
+COMMON_HEADER := src/infiltratr-common/include/infiltratr/filesystem_module_v2.h
 
 .PHONY: all test clean
-all:
+all: $(COMMON_HEADER)
 	cmake -S . -B "$(OUT)/unified" -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
 	cmake --build "$(OUT)/unified" --target exfat-unified --parallel 2
 	mkdir -p "$(OUT)"
 	cp "$(OUT)/unified/exFAT.so" "$(OUT)/exFAT.so"
 
-$(OUT)/exfat-realimage-test: tests/exfat_so_realimage_test.c include/infiltratr/filesystem_module_v2.h
+$(OUT)/exfat-realimage-test: tests/exfat_so_realimage_test.c $(COMMON_HEADER)
 	mkdir -p "$(OUT)"
-	$(CC) $(CFLAGS) -Iinclude $< -ldl -o "$@"
+	$(CC) $(CFLAGS) -Isrc/infiltratr-common/include $< -ldl -o "$@"
 
 test: all $(OUT)/exfat-realimage-test
 	cmake --build "$(OUT)/unified" --target exfat-unified-contract --parallel 2
@@ -27,3 +28,6 @@ test: all $(OUT)/exfat-realimage-test
 
 clean:
 	rm -rf -- "$(OUT)"
+
+$(COMMON_HEADER): standalone/COMMON_REVISION standalone/prepare-common.sh
+	bash standalone/prepare-common.sh

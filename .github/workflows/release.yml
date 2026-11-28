@@ -22,11 +22,14 @@ jobs:
           make test
           test -s build/unified/firmware/exFAT.so
           ! readelf -d build/unified/firmware/exFAT.so | grep '(NEEDED)'
+      - name: Build the source archive with upstream Common
+        run: bash tests/common-source.sh
       - name: Exercise the embedded V2 firmware on valid and corrupt exFAT media
         shell: bash
         run: |
           set -euo pipefail
-          cc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror -Iinclude \
+          bash standalone/prepare-common.sh
+          cc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror -Isrc/infiltratr-common/include \
             tests/exfat_boot_v2_test.c -ldl -o build/exfat-firmware-test
           work="$RUNNER_TEMP/exfat-boot-fixture"
           mkdir -p "$work"
@@ -46,6 +49,7 @@ jobs:
           bash tests/read-firmware-media.sh build/exfat-firmware-test build/exFAT.so "$work/corrupt.img" --reject-corrupt
           bash tests/read-firmware-media.sh build/exfat-firmware-test build/unified/firmware/exFAT.so \
             "$work/corrupt.img" --reject-corrupt
+          bash standalone/prepare-common.sh
           cc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror \
             tests/exfat_mutate_geometry.c -o build/exfat-mutate-geometry
           cp "$work/exfat.img" "$work/bad-layout.img"
